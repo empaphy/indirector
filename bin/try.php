@@ -9,7 +9,7 @@ require_once dirname(__DIR__) . '/vendor/autoload.php';
 
 RectorStreamWrapper::register();
 
-include 'rectorfile://includeme.php';
+include 'rectorfile://' . __DIR__ . '/includeme.php';
 
 $includeMe = new IncludeMe();
 $includeMe->helloWorld();

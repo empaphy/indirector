@@ -8,17 +8,13 @@ declare(strict_types=1);
 
 namespace Empaphy\StreamWrapper;
 
-use Rector\ChangesReporting\Output\JsonOutputFormatter;
+use Rector\Core\Application\FileProcessor;
 use Rector\Core\Bootstrap\RectorConfigsResolver;
-use Rector\Core\Configuration\Option;
-use Rector\Core\Console\Style\SymfonyStyleFactory;
 use Rector\Core\DependencyInjection\RectorContainerFactory;
-use Rector\Core\Util\Reflection\PrivatesAccessor;
+use Rector\Core\Provider\CurrentFileProvider;
+use Rector\Core\ValueObject\Application\File;
 use Rector\Core\ValueObject\Bootstrap\BootstrapConfigs;
-use RectorPrefix202309\Nette\Utils\Json;
-use RectorPrefix202309\Symfony\Component\Console\Application;
-use RectorPrefix202309\Symfony\Component\Console\Command\Command;
-use RectorPrefix202309\Symfony\Component\Console\Input\ArgvInput;
+use Rector\Core\ValueObject\Configuration;
 use RuntimeException;
 
 /**
@@ -32,13 +28,38 @@ class RectorStreamWrapper implements SeekableResourceWrapper
     /**
      * @var resource
      */
-    public $context;
+    public                                                     $context;
+
+    /**
+     * @var \RectorPrefix202309\Illuminate\Contracts\Container\Container $container
+     */
+    private        $container;
+
+    private string $path;
 
     public function __construct()
     {
-        $bootstrapConfigs = $this->provideRectorConfigs();
+        $bootstrapConfigs       = $this->provideRectorConfigs();
         $rectorContainerFactory = new RectorContainerFactory();
-        $container = $rectorContainerFactory->createFromBootstrapConfigs($bootstrapConfigs);
+
+        $this->container = $rectorContainerFactory->createFromBootstrapConfigs($bootstrapConfigs);
+    }
+
+    private function downgrade(string $contents): string
+    {
+        /** @var FileProcessor $fileProcessor */
+        $fileProcessor = $this->container->get(FileProcessor::class);
+        /** @var CurrentFileProvider $fileProvider */
+        $fileProvider = $this->container->get(CurrentFileProvider::class);
+
+        include_once $this->path;
+
+        $file = new File($this->path, $contents);
+
+        $fileProvider->setFile($file);
+        $fileProcessor->processFile($file, new Configuration());
+
+        return $file->getFileContent();
     }
 
     /**
@@ -49,10 +70,11 @@ class RectorStreamWrapper implements SeekableResourceWrapper
     private function provideRectorConfigs(): BootstrapConfigs
     {
         // TODO: implement something here
-        $mainConfigFile         = null;
+        $mainConfigFile         = 'rector.php';
         $rectorRecipeConfigFile = null;
 
         $configFiles = [];
+
         if ($rectorRecipeConfigFile !== null) {
             $configFiles[] = $rectorRecipeConfigFile;
         }
@@ -95,6 +117,7 @@ class RectorStreamWrapper implements SeekableResourceWrapper
         $realpath = realpath($path);
         if (false !== $realpath) {
             $this->context = fopen($realpath, $mode, true);
+            $this->path = $realpath;
             $opened_path   = $realpath;
         }
 
@@ -114,9 +137,10 @@ class RectorStreamWrapper implements SeekableResourceWrapper
         /** @noinspection OneTimeUseVariablesInspection
          *  @noinspection PhpUnnecessaryLocalVariableInspection */
         $contents = fread($this->context, $count);
-//        if (false !== $contents) {
-//            $contents = $this->downgrade($contents);
-//        }
+
+        if (false !== $contents) {
+            $contents = $this->downgrade($contents);
+        }
 
         return $contents;
     }
