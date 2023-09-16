@@ -15,6 +15,7 @@ use Rector\Core\Provider\CurrentFileProvider;
 use Rector\Core\ValueObject\Application\File;
 use Rector\Core\ValueObject\Bootstrap\BootstrapConfigs;
 use Rector\Core\ValueObject\Configuration;
+use RectorPrefix202309\Illuminate\Container\Container;
 use RuntimeException;
 
 /**
@@ -23,61 +24,47 @@ use RuntimeException;
  */
 class RectorStreamWrapper implements SeekableResourceWrapper
 {
-    public const PROTOCOL = 'rectorfile';
-
-    /**
-     * @var resource
-     */
-    public                                                     $context;
-
-    /**
-     * @var \RectorPrefix202309\Illuminate\Contracts\Container\Container $container
-     */
-    private        $container;
-
-    private string $path;
-
-    public function __construct()
-    {
-        $bootstrapConfigs       = $this->provideRectorConfigs();
-        $rectorContainerFactory = new RectorContainerFactory();
-
-        $this->container = $rectorContainerFactory->createFromBootstrapConfigs($bootstrapConfigs);
+    use WrapsFileStream {
+        stream_open as _stream_open;
     }
 
-    private function downgrade(string $contents): string
-    {
-        /** @var FileProcessor $fileProcessor */
-        $fileProcessor = $this->container->get(FileProcessor::class);
-        /** @var CurrentFileProvider $fileProvider */
-        $fileProvider = $this->container->get(CurrentFileProvider::class);
-
-        include_once $this->path;
-
-        $file = new File($this->path, $contents);
-
-        $fileProvider->setFile($file);
-        $fileProcessor->processFile($file, new Configuration());
-
-        return $file->getFileContent();
-    }
+    private const STREAM_OPEN_FOR_INCLUDE = 0x00000080;
 
     /**
-     * @see RectorConfigsResolver::provide();
+     * @var int
+     */
+    private static int $registered = 0;
+
+    /**
+     * @var \RectorPrefix202309\Illuminate\Container\Container
+     */
+    private Container $rectorContainer;
+
+    /**
+     * @var \Rector\Core\Application\FileProcessor
+     */
+    private FileProcessor $rectorFileProcessor;
+
+    /**
+     * @var \Rector\Core\ValueObject\Configuration
+     */
+    private Configuration $rectorConfiguration;
+
+    /**
+     * @var \Rector\Core\Provider\CurrentFileProvider
+     */
+    private CurrentFileProvider $rectorCurrentFileProvider;
+
+    /**
+     * @see RectorConfigsResolver::provide()
      *
      * @return \Rector\Core\ValueObject\Bootstrap\BootstrapConfigs
      */
     private function provideRectorConfigs(): BootstrapConfigs
     {
         // TODO: implement something here
-        $mainConfigFile         = 'rector.php';
-        $rectorRecipeConfigFile = null;
-
-        $configFiles = [];
-
-        if ($rectorRecipeConfigFile !== null) {
-            $configFiles[] = $rectorRecipeConfigFile;
-        }
+        $mainConfigFile = null;
+        $configFiles = [dirname(__DIR__) . DIRECTORY_SEPARATOR . 'rector.php'];
 
         return new BootstrapConfigs($mainConfigFile, $configFiles);
     }
@@ -87,12 +74,31 @@ class RectorStreamWrapper implements SeekableResourceWrapper
      */
     public static function register(): bool
     {
-        $result = stream_wrapper_register(self::PROTOCOL, self::class);
+        if (self::$registered > 0) {
+            return true;
+        }
+
+        stream_wrapper_unregister('file');
+        self::$registered++;
+        $result = stream_wrapper_register('file', __CLASS__);
+
         if (! $result) {
             throw new RuntimeException('Failed to register stream wrapper.');
         }
 
         /** @noinspection PhpConditionAlreadyCheckedInspection */
+        return $result;
+    }
+
+    public static function unregister(): bool
+    {
+        $result = true;
+
+        if (self::$registered > 0) {
+            $result = stream_wrapper_restore('file');
+            self::$registered = 0;
+        }
+
         return $result;
     }
 
@@ -108,130 +114,75 @@ class RectorStreamWrapper implements SeekableResourceWrapper
      *                                    options, `opened_path` should be set to the full path of the file/resource
      *                                    that was actually opened.
      * @return bool `true` on success or `false` on failure.
+     *
+     * @throws \RectorPrefix202309\Psr\Container\ContainerExceptionInterface
+     * @throws \RectorPrefix202309\Psr\Container\NotFoundExceptionInterface
      */
     public function stream_open(string $path, string $mode, int $options, ?string &$opened_path): bool
     {
-        // Remove the protocol from the path.
-        $path = substr($path, strlen(self::PROTOCOL . '://'));
+        self::unregister();
 
-        $realpath = realpath($path);
-        if (false !== $realpath) {
-            $this->context = fopen($realpath, $mode, true);
-            $this->path = $realpath;
-            $opened_path   = $realpath;
+        $bootstrapConfigs = $this->provideRectorConfigs();
+        $rectorContainerFactory = new RectorContainerFactory();
+
+        $this->rectorConfiguration = new Configuration(
+            isDryRun:        true,
+            showProgressBar: false,
+            showDiffs:       false,
+        );
+
+        $this->rectorContainer           = $rectorContainerFactory->createFromBootstrapConfigs($bootstrapConfigs);
+        $this->rectorCurrentFileProvider = $this->rectorContainer->get(CurrentFileProvider::class);
+        $this->rectorFileProcessor       = $this->rectorContainer->get(FileProcessor::class);
+
+        $content   = null;
+        $including = (bool) ($options & self::STREAM_OPEN_FOR_INCLUDE);
+
+        try {
+            if ($including) {
+                $fork = new Fork(function () use ($path) {
+                    include $path;
+
+                    $realpath = stream_resolve_include_path($path);
+
+                    if (false === $realpath) {
+                        return false;
+                    }
+
+                    $rectorFile = new File($realpath, file_get_contents($realpath, true));
+                    $this->rectorCurrentFileProvider->setFile($rectorFile);
+                    $fileProcessResult = $this->rectorFileProcessor->processFile(
+                        $rectorFile,
+                        $this->rectorConfiguration
+                    );
+                    $systemErrors = $fileProcessResult->getSystemErrors();
+
+                    if (! empty($systemErrors)) {
+                        return false;
+                    }
+
+                    if ($rectorFile->hasChanged()) {
+                        return $rectorFile->getFileContent();
+                    }
+
+                    return null;
+                });
+
+                $content = $fork->wait();
+            }
+
+            if (null === $content) {
+                return $this->_stream_open($path, $mode, $options, $opened_path);
+            }
+
+            $this->handle = fopen('php://memory', 'rb+');
+
+            fwrite($this->handle, $content);
+            rewind($this->handle);
+        } finally {
+            self::register();
         }
 
-        return true;
-    }
-
-    /**
-     * Read the included PHP file.
-     *
-     * @param  int  $count  How many bytes of data from the current position should be returned.
-     * @return string|false If there are less than $count bytes available, as many as are available should be returned.
-     *                      If no more data is available, an empty string should be returned.
-     *                      To signal that reading failed, false should be returned.
-     */
-    public function stream_read(int $count): string|false
-    {
-        /** @noinspection OneTimeUseVariablesInspection
-         *  @noinspection PhpUnnecessaryLocalVariableInspection */
-        $contents = fread($this->context, $count);
-
-        if (false !== $contents) {
-            $contents = $this->downgrade($contents);
-        }
-
-        return $contents;
-    }
-
-    /**
-     * Change stream options.
-     *
-     * This method is called to set options on the stream.
-     *
-     * @param  int  $option
-     * @param  int  $arg1
-     * @param  int  $arg2
-     * @return bool `true` on success or `false` on failure. If $option is not implemented, false should be returned.
-     */
-    public function stream_set_option(int $option, int $arg1, int $arg2): bool
-    {
-        return false;
-    }
-
-    /**
-     * Retrieve information about a file resource.
-     *
-     * This method is called in response to {@see fstat()}.
-     *
-     * @return array|false See {@see stat()}.
-     */
-    public function stream_stat(): array|false
-    {
-        return fstat($this->context);
-    }
-
-    /**
-     * This method is not supported for this stream wrapper.
-     *
-     * @param  string  $data
-     * @return int
-     */
-    public function stream_write(string $data): int
-    {
-        throw new RuntimeException('Writing to this stream is not supported.');
-    }
-
-
-    /**
-     * Retrieve the current position of the file handle.
-     *
-     * @return int returns the current position of the file handle.
-     */
-    public function stream_tell(): int
-    {
-        return ftell($this->context);
-    }
-
-    /**
-     * Tests for end-of-file on a file pointer.
-     *
-     * @return bool `true` if the read/write position is at the end of the stream and if no more data is available to be
-     *              read, or false otherwise.
-     */
-    public function stream_eof(): bool
-    {
-        return feof($this->context);
-    }
-
-    /**
-     * Seeks to specific location in a stream.
-     *
-     * @param  int  $offset  The stream offset to seek to.
-     * @param  int  $whence  Possible values:
-     *                         - {@see SEEK_SET} - Set position equal to $offset bytes.
-     *                         - {@see SEEK_CUR} - Set position to current location plus $offset.
-     *                         - {@see SEEK_END} - Set position to end-of-file plus $offset.
-     * @return bool `true` if the position was updated, `false` otherwise.
-     */
-    public function stream_seek(int $offset, int $whence = SEEK_SET): bool
-    {
-        return 0 === fseek($this->context, $offset, $whence);
-    }
-
-    /**
-     * Change stream metadata.
-     *
-     * This method is not supported for this stream wrapper.
-     *
-     * @param  string  $path    The file path or URL to set metadata.
-     * @param  int     $option
-     * @param  mixed   $value
-     * @return bool If $option is not implemented, `false` should be returned.
-     */
-    public function stream_metadata(string $path, int $option, mixed $value): bool
-    {
-        return false;
+        return $this->handle !== false;
     }
 }

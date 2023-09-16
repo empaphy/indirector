@@ -1,7 +1,9 @@
 {
     "name": "empaphy/stream-wrapper",
-    "require-dev": {
+    "require": {
         "php": ">=8.2",
+        "ext-pcntl": "*",
+        "ext-sockets": "*",
         "empaphy/composer-yaml": "^1",
         "rector/rector": "~0.18.0"
     },
