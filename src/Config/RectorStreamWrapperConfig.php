@@ -15,6 +15,11 @@ use Rector\Set\ValueObject\DowngradeLevelSetList;
 final class RectorStreamWrapperConfig
 {
     /**
+     * @var null|string
+     */
+    private $cacheDirectory;
+
+    /**
      * @var \Rector\Config\RectorConfig
      */
     private $container;
@@ -38,6 +43,10 @@ final class RectorStreamWrapperConfig
         $this->container->sets([
             constant(DowngradeLevelSetList::class . '::' . $levelSetList),
         ]);
+
+        $this->container->singleton(__CLASS__, function () {
+            return $this;
+        });
     }
 
     /**
@@ -50,6 +59,14 @@ final class RectorStreamWrapperConfig
         $callable($this->container);
 
         return $this;
+    }
+
+    /**
+     * @return null|string
+     */
+    public function getCacheDirectory(): ?string
+    {
+        return $this->cacheDirectory;
     }
 
     /**
@@ -90,6 +107,8 @@ final class RectorStreamWrapperConfig
      */
     public function setCacheDirectory(string $cacheDirectory): self
     {
+        $this->cacheDirectory = $cacheDirectory;
+
         $this->container->cacheDirectory($cacheDirectory);
 
         return $this;
