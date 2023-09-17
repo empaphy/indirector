@@ -124,6 +124,10 @@ abstract class AbstractRectorProcessor implements RectorProcessor
     {
         $cachedFile = $this->getCacheFilePath($path);
 
+        if (! $cachedFile) {
+            return false;
+        }
+
         return file_exists($cachedFile);
     }
 
@@ -136,6 +140,10 @@ abstract class AbstractRectorProcessor implements RectorProcessor
     private function setFileCache(string $path, string $getFileContent): void
     {
         $cachedFile = $this->getCacheFilePath($path);
+
+        if (! $cachedFile) {
+            return;
+        }
 
         file_put_contents($cachedFile, $getFileContent);
     }
