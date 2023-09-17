@@ -79,12 +79,12 @@ abstract class AbstractRectorProcessor implements RectorProcessor
         }
 
         if ($rectorFile->hasChanged()) {
-            $this->setCachedFile($path, $rectorFile->getFileContent());
+            $this->setFileCache($path, $rectorFile->getFileContent());
 
             return $rectorFile->getFileContent();
         }
 
-        $this->setCachedFile($path, '');
+        $this->setFileCache($path, '');
 
         return null;
     }
