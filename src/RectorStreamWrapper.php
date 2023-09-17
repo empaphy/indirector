@@ -8,13 +8,11 @@ declare(strict_types=1);
 
 namespace Empaphy\StreamWrapper;
 
+use Empaphy\StreamWrapper\Config\RectorStreamWrapperConfig;
+use Empaphy\StreamWrapper\Processor\RectorProcessor;
 use Rector\ChangesReporting\Output\ConsoleOutputFormatter;
 use Rector\Core\Application\FileProcessor;
-use Rector\Core\Bootstrap\RectorConfigsResolver;
-use Rector\Core\DependencyInjection\RectorContainerFactory;
 use Rector\Core\Provider\CurrentFileProvider;
-use Rector\Core\ValueObject\Application\File;
-use Rector\Core\ValueObject\Bootstrap\BootstrapConfigs;
 use Rector\Core\ValueObject\Configuration;
 use RuntimeException;
 
@@ -31,9 +29,19 @@ class RectorStreamWrapper implements SeekableResourceWrapper
     private const STREAM_OPEN_FOR_INCLUDE = 0x00000080;
 
     /**
+     * @var \Empaphy\StreamWrapper\Config\RectorStreamWrapperConfig
+     */
+    private static $config;
+
+    /**
      * @var int
      */
     private static $registered = 0;
+
+    /**
+     * @var \RectorPrefix202309\Psr\Container\ContainerInterface
+     */
+    private $rectorContainer;
 
     /**
      * @var \Rector\Core\Application\FileProcessor
@@ -51,26 +59,17 @@ class RectorStreamWrapper implements SeekableResourceWrapper
     private $rectorCurrentFileProvider;
 
     /**
-     * @return \Rector\Core\ValueObject\Bootstrap\BootstrapConfigs
-     * @see RectorConfigsResolver::provide()
-     */
-    private function provideRectorConfigs(): BootstrapConfigs
-    {
-        // TODO: implement something here
-        $mainConfigFile = null;
-        $configFiles    = [dirname(__DIR__) . DIRECTORY_SEPARATOR . 'rector.php'];
-
-        return new BootstrapConfigs($mainConfigFile, $configFiles);
-    }
-
-    /**
+     * @param  null|\Empaphy\StreamWrapper\Config\RectorStreamWrapperConfig $config
+     *
      * @return bool
      */
-    public static function register(): bool
+    public static function register(?RectorStreamWrapperConfig $config = null): bool
     {
         if (self::$registered > 0) {
             return true;
         }
+
+        self::$config = $config ?? self::$config ?? new RectorStreamWrapperConfig();
 
         stream_wrapper_unregister('file');
         self::$registered++;
@@ -115,57 +114,18 @@ class RectorStreamWrapper implements SeekableResourceWrapper
     {
         self::unregister();
 
-        $bootstrapConfigs       = $this->provideRectorConfigs();
-        $rectorContainerFactory = new RectorContainerFactory();
-
-        $this->rectorConfiguration = new Configuration(
-            true,
-            false,
-            false,
-            ConsoleOutputFormatter::NAME,
-            ['php'],
-            [],
-            false
-        );
-
-        $rectorContainer                 = $rectorContainerFactory->createFromBootstrapConfigs($bootstrapConfigs);
-        $this->rectorCurrentFileProvider = $rectorContainer->get(CurrentFileProvider::class);
-        $this->rectorFileProcessor       = $rectorContainer->get(FileProcessor::class);
+        if (! $this->rectorContainer) {
+            $this->setupRector();
+        }
 
         $content   = null;
-        $including = (bool) ($options & self::STREAM_OPEN_FOR_INCLUDE);
+        $including = $options & self::STREAM_OPEN_FOR_INCLUDE;
 
         try {
             if ($including) {
-                $fork = new Fork(function () use ($path) {
-                    include $path;
-
-                    $realpath = stream_resolve_include_path($path);
-
-                    if (false === $realpath) {
-                        return false;
-                    }
-
-                    $rectorFile = new File($realpath, file_get_contents($realpath, true));
-                    $this->rectorCurrentFileProvider->setFile($rectorFile);
-                    $fileProcessResult = $this->rectorFileProcessor->processFile(
-                        $rectorFile,
-                        $this->rectorConfiguration
-                    );
-                    $systemErrors      = $fileProcessResult->getSystemErrors();
-
-                    if (! empty($systemErrors)) {
-                        return false;
-                    }
-
-                    if ($rectorFile->hasChanged()) {
-                        return $rectorFile->getFileContent();
-                    }
-
-                    return null;
-                });
-
-                $content = $fork->wait();
+                /** @var \Empaphy\StreamWrapper\Processor\RectorProcessor $processor */
+                $processor = $this->rectorContainer->get(RectorProcessor::class);
+                $content   = $processor->process($path);
             }
 
             if (null === $content) {
@@ -181,5 +141,29 @@ class RectorStreamWrapper implements SeekableResourceWrapper
         }
 
         return $this->handle !== false;
+    }
+
+    /**
+     * @return void
+     * @throws \RectorPrefix202309\Psr\Container\ContainerExceptionInterface
+     * @throws \RectorPrefix202309\Psr\Container\NotFoundExceptionInterface
+     */
+    protected function setupRector(): void
+    {
+        $this->rectorContainer = self::$config->getContainer();
+        $this->rectorContainer->boot();
+
+        $this->rectorCurrentFileProvider = $this->rectorContainer->get(CurrentFileProvider::class);
+        $this->rectorFileProcessor       = $this->rectorContainer->get(FileProcessor::class);
+
+        $this->rectorConfiguration = new Configuration(
+            true,
+            false,
+            false,
+            ConsoleOutputFormatter::NAME,
+            ['php'],
+            [],
+            false
+        );
     }
 }
