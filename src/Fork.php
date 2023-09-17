@@ -13,9 +13,8 @@ class Fork
     public const ACTION_THROW  = 'throw';
     public const ACTION_VOID   = 'void';
     public const DELIMITER     = "\n__CUTLERY_FORK_END_DELIMITER__\n";
-
     public const SOCKET_BUFFER_SIZE = 16777216;
-    public const BUFFER_SIZE = 1024;
+    public const BUFFER_SIZE        = 1024;
 
     /**
      * @var int
@@ -105,13 +104,12 @@ class Fork
 
     /**
      * @return string|null
-     *
      * @throws \RuntimeException
      */
     public function wait(): ?string
     {
         $delimiterPosition = false;
-        $buffer = '';
+        $buffer            = '';
 
         socket_set_nonblock($this->socketPair[1]);
 
@@ -121,8 +119,9 @@ class Fork
             $except = [];
 
             $socketCount = socket_select($read, $write, $except, 1);
+
             if ($socketCount) {
-                while(($data = socket_read($this->socketPair[1], self::BUFFER_SIZE))) {
+                while ($data = socket_read($this->socketPair[1], self::BUFFER_SIZE)) {
                     $buffer .= $data;
                 }
 
@@ -130,15 +129,15 @@ class Fork
                 if (false !== $delimiterPosition) {
                     $buffer = substr($buffer, 0, $delimiterPosition);
                 }
-            } elseif (false === $socketCount) {
-                throw new RuntimeException(
-                    'socket_select() failed: ' . socket_strerror(socket_last_error($this->socketPair[1]))
-                );
-            } else {
+            } elseif (false !== $socketCount) {
                 $pid = pcntl_waitpid($this->pid, $status, WNOHANG);
                 if (-1 === $pid) {
                     throw new RuntimeException("Child process (pid {$this->pid}) exited too early: {$pid}");
                 }
+            } else {
+                throw new RuntimeException(
+                    'socket_select() failed: ' . socket_strerror(socket_last_error($this->socketPair[1]))
+                );
             }
         } while (false === $delimiterPosition);
 

@@ -58,7 +58,8 @@ trait WrapsFileStream
     public function stream_read(int $count)
     {
         /** @noinspection OneTimeUseVariablesInspection
-         *  @noinspection PhpUnnecessaryLocalVariableInspection */
+         * @noinspection PhpUnnecessaryLocalVariableInspection
+         */
         $contents = fread($this->handle, $count);
 
         return $contents;
@@ -66,7 +67,6 @@ trait WrapsFileStream
 
     /**
      * Retrieve information about a file resource.
-     *
      * This method is called in response to {@see fstat()}.
      *
      * @return array|false See {@see stat()}.
@@ -121,7 +121,7 @@ trait WrapsFileStream
      * > **Note:**
      * > Remember to update the current position of the stream by number of bytes that were successfully written.
      *
-     * @param  string  $data  Should be stored into the underlying stream.
+     * @param  string $data   Should be stored into the underlying stream.
      *                        > **Note:**
      *                        > If there is not enough room in the underlying stream, store as much as possible.
      *
@@ -164,35 +164,33 @@ trait WrapsFileStream
 
     /**
      * Change stream metadata.
-     *
      * This method is called to set metadata on the stream. It is called when one of the following functions is called
      * on a stream URL:
-     *
      *   - {@see touch()}
      *   - {@see chmod()}
      *   - {@see chown()}
      *   - {@see chgrp()}
-     *
      * Please note that some of these operations may not be available on your system.
      *
-     * @param  string  $path    The file path or URL to set metadata. Note that in the case of a URL, it must be a ://
-     *                          delimited URL. Other URL forms are not supported.
-     * @param  int     $option  One of:
-     *                            - {@see STREAM_META_TOUCH} (The method was called in response to {@see touch()})
-     *                            - {@see STREAM_META_OWNER_NAME} (The method was called in response to {@see chown()}
+     * @param  string $path         The file path or URL to set metadata. Note that in the case of a URL, it must be a ://
+     *                              delimited URL. Other URL forms are not supported.
+     * @param  int    $option       One of:
+     *                              - {@see STREAM_META_TOUCH} (The method was called in response to {@see touch()})
+     *                              - {@see STREAM_META_OWNER_NAME} (The method was called in response to {@see chown()}
      *                              with string parameter)
-     *                            - {@see STREAM_META_OWNER} (The method was called in response to {@see chown()})
-     *                            - {@see STREAM_META_GROUP_NAME} (The method was called in response to {@see chgrp()})
-     *                            - {@see STREAM_META_GROUP} (The method was called in response to {@see chgrp()})
-     *                            - {@see STREAM_META_ACCESS} (The method was called in response to {@see chmod()})
-     * @param  mixed   $value  If option is
-     *                           - {@see STREAM_META_TOUCH}: Array consisting of two arguments of the {@see touch()}
-     *                             function.
-     *                           - {@see STREAM_META_OWNER_NAME} or {@see STREAM_META_GROUP_NAME}: The name of the owner
-     *                             user/group as string.
-     *                           - {@see STREAM_META_OWNER} or {@see STREAM_META_GROUP}: The value owner user/group
-     *                             argument as int.
-     *                           - {@see STREAM_META_ACCESS}: The argument of the {@see chmod()} as int.
+     *                              - {@see STREAM_META_OWNER} (The method was called in response to {@see chown()})
+     *                              - {@see STREAM_META_GROUP_NAME} (The method was called in response to {@see chgrp()})
+     *                              - {@see STREAM_META_GROUP} (The method was called in response to {@see chgrp()})
+     *                              - {@see STREAM_META_ACCESS} (The method was called in response to {@see chmod()})
+     * @param  mixed  $value        If option is
+     *                              - {@see STREAM_META_TOUCH}: Array consisting of two arguments of the {@see touch()}
+     *                              function.
+     *                              - {@see STREAM_META_OWNER_NAME} or {@see STREAM_META_GROUP_NAME}: The name of the owner
+     *                              user/group as string.
+     *                              - {@see STREAM_META_OWNER} or {@see STREAM_META_GROUP}: The value owner user/group
+     *                              argument as int.
+     *                              - {@see STREAM_META_ACCESS}: The argument of the {@see chmod()} as int.
+     *
      * @return bool `true` on success or `false` on failure. If $option is not implemented, `false` should be returned.
      */
     public function stream_metadata(string $path, int $option, $value): bool

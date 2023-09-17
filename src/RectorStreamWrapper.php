@@ -51,15 +51,14 @@ class RectorStreamWrapper implements SeekableResourceWrapper
     private $rectorCurrentFileProvider;
 
     /**
-     * @see RectorConfigsResolver::provide()
-     *
      * @return \Rector\Core\ValueObject\Bootstrap\BootstrapConfigs
+     * @see RectorConfigsResolver::provide()
      */
     private function provideRectorConfigs(): BootstrapConfigs
     {
         // TODO: implement something here
         $mainConfigFile = null;
-        $configFiles = [dirname(__DIR__) . DIRECTORY_SEPARATOR . 'rector.php'];
+        $configFiles    = [dirname(__DIR__) . DIRECTORY_SEPARATOR . 'rector.php'];
 
         return new BootstrapConfigs($mainConfigFile, $configFiles);
     }
@@ -90,7 +89,7 @@ class RectorStreamWrapper implements SeekableResourceWrapper
         $result = true;
 
         if (self::$registered > 0) {
-            $result = stream_wrapper_restore('file');
+            $result           = stream_wrapper_restore('file');
             self::$registered = 0;
         }
 
@@ -116,7 +115,7 @@ class RectorStreamWrapper implements SeekableResourceWrapper
     {
         self::unregister();
 
-        $bootstrapConfigs = $this->provideRectorConfigs();
+        $bootstrapConfigs       = $this->provideRectorConfigs();
         $rectorContainerFactory = new RectorContainerFactory();
 
         $this->rectorConfiguration = new Configuration(
@@ -153,7 +152,7 @@ class RectorStreamWrapper implements SeekableResourceWrapper
                         $rectorFile,
                         $this->rectorConfiguration
                     );
-                    $systemErrors = $fileProcessResult->getSystemErrors();
+                    $systemErrors      = $fileProcessResult->getSystemErrors();
 
                     if (! empty($systemErrors)) {
                         return false;
