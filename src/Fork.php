@@ -17,12 +17,15 @@ class Fork
     public const SOCKET_BUFFER_SIZE = 16777216;
     public const BUFFER_SIZE = 1024;
 
-    protected int $pid;
+    /**
+     * @var int
+     */
+    protected $pid;
 
     /**
      * @var resource[]
      */
-    protected array $socketPair;
+    protected $socketPair;
 
     public function __construct($callable)
     {
@@ -52,7 +55,7 @@ class Fork
                     $exitStatus = 1;
                     try {
                         $data = self::ACTION_THROW . ',' . base64_encode($t->getMessage());
-                    } catch (Throwable) {
+                    } catch (Throwable $exception) {
                         $data = self::ACTION_THROW . ',' . base64_encode('Unknown Error');
                     }
                 } finally {

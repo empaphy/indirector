@@ -8,6 +8,7 @@ declare(strict_types=1);
 
 namespace Empaphy\StreamWrapper;
 
+use Rector\ChangesReporting\Output\ConsoleOutputFormatter;
 use Rector\Core\Application\FileProcessor;
 use Rector\Core\Bootstrap\RectorConfigsResolver;
 use Rector\Core\DependencyInjection\RectorContainerFactory;
@@ -15,7 +16,6 @@ use Rector\Core\Provider\CurrentFileProvider;
 use Rector\Core\ValueObject\Application\File;
 use Rector\Core\ValueObject\Bootstrap\BootstrapConfigs;
 use Rector\Core\ValueObject\Configuration;
-use RectorPrefix202309\Illuminate\Container\Container;
 use RuntimeException;
 
 /**
@@ -33,27 +33,22 @@ class RectorStreamWrapper implements SeekableResourceWrapper
     /**
      * @var int
      */
-    private static int $registered = 0;
-
-    /**
-     * @var \RectorPrefix202309\Illuminate\Container\Container
-     */
-    private Container $rectorContainer;
+    private static $registered = 0;
 
     /**
      * @var \Rector\Core\Application\FileProcessor
      */
-    private FileProcessor $rectorFileProcessor;
+    private $rectorFileProcessor;
 
     /**
      * @var \Rector\Core\ValueObject\Configuration
      */
-    private Configuration $rectorConfiguration;
+    private $rectorConfiguration;
 
     /**
      * @var \Rector\Core\Provider\CurrentFileProvider
      */
-    private CurrentFileProvider $rectorCurrentFileProvider;
+    private $rectorCurrentFileProvider;
 
     /**
      * @see RectorConfigsResolver::provide()
@@ -104,17 +99,16 @@ class RectorStreamWrapper implements SeekableResourceWrapper
 
     /**
      * Opens an included PHP file and downgrades it to the currently running PHP version using Rector.
-     *
      * This method is called immediately after the wrapper is initialized (i.e. by `include`).
      *
-     * @param  string       $path         Specifies the path that was passed to the original function.
-     * @param  string       $mode         The mode used to open the file, as detailed for {@see fopen()}.
-     * @param  int          $options      Holds additional flags set by the streams API.
-     * @param  string|null  $opened_path  If the path is opened successfully, and {@see STREAM_USE_PATH} is set in
+     * @param  string      $path          Specifies the path that was passed to the original function.
+     * @param  string      $mode          The mode used to open the file, as detailed for {@see fopen()}.
+     * @param  int         $options       Holds additional flags set by the streams API.
+     * @param  null|string $opened_path   If the path is opened successfully, and {@see STREAM_USE_PATH} is set in
      *                                    options, `opened_path` should be set to the full path of the file/resource
      *                                    that was actually opened.
-     * @return bool `true` on success or `false` on failure.
      *
+     * @return bool `true` on success or `false` on failure.
      * @throws \RectorPrefix202309\Psr\Container\ContainerExceptionInterface
      * @throws \RectorPrefix202309\Psr\Container\NotFoundExceptionInterface
      */
@@ -126,14 +120,18 @@ class RectorStreamWrapper implements SeekableResourceWrapper
         $rectorContainerFactory = new RectorContainerFactory();
 
         $this->rectorConfiguration = new Configuration(
-            isDryRun:        true,
-            showProgressBar: false,
-            showDiffs:       false,
+            true,
+            false,
+            false,
+            ConsoleOutputFormatter::NAME,
+            ['php'],
+            [],
+            false
         );
 
-        $this->rectorContainer           = $rectorContainerFactory->createFromBootstrapConfigs($bootstrapConfigs);
-        $this->rectorCurrentFileProvider = $this->rectorContainer->get(CurrentFileProvider::class);
-        $this->rectorFileProcessor       = $this->rectorContainer->get(FileProcessor::class);
+        $rectorContainer                 = $rectorContainerFactory->createFromBootstrapConfigs($bootstrapConfigs);
+        $this->rectorCurrentFileProvider = $rectorContainer->get(CurrentFileProvider::class);
+        $this->rectorFileProcessor       = $rectorContainer->get(FileProcessor::class);
 
         $content   = null;
         $including = (bool) ($options & self::STREAM_OPEN_FOR_INCLUDE);

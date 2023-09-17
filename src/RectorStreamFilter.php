@@ -39,7 +39,7 @@ class RectorStreamFilter extends php_user_filter
      *             {@see PSFS_ERR_FATAL}
      *             : The filter experienced an unrecoverable error and cannot continue.
      */
-    public function filter($in, $out, &$consumed, bool $closing): int
+    public function filter($in, $out, &$consumed, $closing): int
     {
         while ($bucket = stream_bucket_make_writeable($in)) {
             $bucket->data = $bucket->data;

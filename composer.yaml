@@ -1,6 +1,6 @@
 name: empaphy/stream-wrapper
 require:
-    php:                   '>=8.2'
+    php:                   '>=7.1'
     ext-pcntl:             '*'          # Required for the stream wrapper.
     ext-sockets:           '*'          # Required for the stream wrapper.
     rector/rector:         '~0.18.0'

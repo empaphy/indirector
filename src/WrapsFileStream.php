@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Empaphy\StreamWrapper;
 
+use RuntimeException;
+
 trait WrapsFileStream
 {
     public $context;
@@ -15,16 +17,16 @@ trait WrapsFileStream
 
     /**
      * Opens file.
-     *
      * This method is called immediately after the wrapper is initialized (e.g. by {@see fopen()} and
      * {@see file_get_contents()}).
      *
-     * @param  string       $path         Specifies the path that was passed to the original function.
-     * @param  string       $mode         The mode used to open the file, as detailed for {@see fopen()}.
-     * @param  int          $options      Holds additional flags set by the streams API.
-     * @param  string|null  $opened_path  If the path is opened successfully, and {@see STREAM_USE_PATH} is set in
+     * @param  string      $path          Specifies the path that was passed to the original function.
+     * @param  string      $mode          The mode used to open the file, as detailed for {@see fopen()}.
+     * @param  int         $options       Holds additional flags set by the streams API.
+     * @param  null|string $opened_path   If the path is opened successfully, and {@see STREAM_USE_PATH} is set in
      *                                    options, `opened_path` should be set to the full path of the file/resource
      *                                    that was actually opened.
+     *
      * @return bool `true` on success or `false` on failure.
      */
     public function stream_open(string $path, string $mode, int $options, ?string &$opened_path): bool
@@ -47,12 +49,13 @@ trait WrapsFileStream
     /**
      * Read the included PHP file.
      *
-     * @param  int  $count  How many bytes of data from the current position should be returned.
+     * @param  int $count How many bytes of data from the current position should be returned.
+     *
      * @return string|false If there are less than $count bytes available, as many as are available should be returned.
      *                      If no more data is available, an empty string should be returned.
      *                      To signal that reading failed, false should be returned.
      */
-    public function stream_read(int $count): string|false
+    public function stream_read(int $count)
     {
         /** @noinspection OneTimeUseVariablesInspection
          *  @noinspection PhpUnnecessaryLocalVariableInspection */
@@ -68,19 +71,19 @@ trait WrapsFileStream
      *
      * @return array|false See {@see stat()}.
      */
-    public function stream_stat(): array|false
+    public function stream_stat()
     {
         return fstat($this->handle);
     }
 
     /**
      * Change stream options.
-     *
      * This method is called to set options on the stream.
      *
-     * @param  int  $option
-     * @param  int  $arg1
-     * @param  int  $arg2
+     * @param  int $option
+     * @param  int $arg1
+     * @param  int $arg2
+     *
      * @return bool `true` on success or `false` on failure. If $option is not implemented, false should be returned.
      */
     public function stream_set_option(int $option, int $arg1, int $arg2): bool
@@ -114,15 +117,14 @@ trait WrapsFileStream
 
     /**
      * Write to stream.
-     *
      * This method is called in response to fwrite().
-     *
      * > **Note:**
      * > Remember to update the current position of the stream by number of bytes that were successfully written.
      *
      * @param  string  $data  Should be stored into the underlying stream.
      *                        > **Note:**
      *                        > If there is not enough room in the underlying stream, store as much as possible.
+     *
      * @return int Should return the number of bytes that were successfully stored, or 0 if none could be stored.
      *             > **Note:**
      *             > If the return value is greater than the length of $data, {@see E_WARNING} will be emitted and the
@@ -147,11 +149,12 @@ trait WrapsFileStream
     /**
      * Seeks to specific location in a stream.
      *
-     * @param  int  $offset  The stream offset to seek to.
-     * @param  int  $whence  Possible values:
+     * @param  int $offset     The stream offset to seek to.
+     * @param  int $whence     Possible values:
      *                         - {@see SEEK_SET} - Set position equal to $offset bytes.
      *                         - {@see SEEK_CUR} - Set position to current location plus $offset.
      *                         - {@see SEEK_END} - Set position to end-of-file plus $offset.
+     *
      * @return bool `true` if the position was updated, `false` otherwise.
      */
     public function stream_seek(int $offset, int $whence = SEEK_SET): bool
@@ -192,7 +195,7 @@ trait WrapsFileStream
      *                           - {@see STREAM_META_ACCESS}: The argument of the {@see chmod()} as int.
      * @return bool `true` on success or `false` on failure. If $option is not implemented, `false` should be returned.
      */
-    public function stream_metadata(string $path, int $option, mixed $value): bool
+    public function stream_metadata(string $path, int $option, $value): bool
     {
         self::unregister();
 
