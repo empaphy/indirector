@@ -4,8 +4,10 @@
         "php": ">=8.2",
         "ext-pcntl": "*",
         "ext-sockets": "*",
-        "empaphy/composer-yaml": "^1",
         "rector/rector": "~0.18.0"
+    },
+    "require-dev": {
+        "empaphy/composer-yaml": "^1"
     },
     "autoload": {
         "psr-4": {

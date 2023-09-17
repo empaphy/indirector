@@ -1,22 +1,17 @@
 name: empaphy/stream-wrapper
-
 require:
     php:                   '>=8.2'
     ext-pcntl:             '*'          # Required for the stream wrapper.
     ext-sockets:           '*'          # Required for the stream wrapper.
-    empaphy/composer-yaml: '^1'
     rector/rector:         '~0.18.0'
 
 # Map of packages required for developing this package, or running tests, etc.
-#require-dev:
+require-dev:
+    empaphy/composer-yaml: '^1'
 
 # Autoload mapping for a PHP autoloader.
 autoload:
     psr-4: { Empaphy\StreamWrapper\: src/ }
-
-# This defines the default behavior for filtering packages by stability
 minimum-stability: dev
-
-# A set of configuration options. It is only used for projects.
 config:
     allow-plugins: { empaphy/composer-yaml: true }
