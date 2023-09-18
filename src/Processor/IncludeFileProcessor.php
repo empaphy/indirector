@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Empaphy\StreamWrapper\Processor;
+namespace Empaphy\Indirector\Processor;
 
 use Exception;
 

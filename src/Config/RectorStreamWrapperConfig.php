@@ -7,10 +7,11 @@
 
 declare(strict_types=1);
 
-namespace Empaphy\StreamWrapper\Config;
+namespace Empaphy\Indirector\Config;
 
-use Empaphy\StreamWrapper\Processor\IncludeFileProcessor;
-use Empaphy\StreamWrapper\Processor\RectorProcessor;
+use Empaphy\Indirector\Processor\IncludeFileProcessor;
+use Empaphy\Indirector\Processor\RectorProcessor;
+use Empaphy\Indirector\StreamWrapper\Config\IncludeFileStreamWrapperConfig;
 use Rector\Config\RectorConfig;
 use Rector\Core\DependencyInjection\RectorContainerFactory;
 use Rector\Core\ValueObject\Bootstrap\BootstrapConfigs;
@@ -35,18 +36,21 @@ final class RectorStreamWrapperConfig implements IncludeFileStreamWrapperConfig
         $bootstrapConfigs       = new BootstrapConfigs(null, []);
         $rectorContainerFactory = new RectorContainerFactory();
 
-        /** @var \Rector\Config\RectorConfig $rectorConfig */
-        $rectorConfig = $rectorContainerFactory->createFromBootstrapConfigs($bootstrapConfigs);
+        $this->rectorConfig = $rectorContainerFactory->createFromBootstrapConfigs($bootstrapConfigs);
 
-        $rectorConfig->singleton(IncludeFileProcessor::class, function () {
-            return $this->rectorConfig->make(RectorProcessor::class);
-        });
-        $rectorConfig->singleton(__CLASS__, function () {
+        $this->rectorConfig->alias(RectorProcessor::class, IncludeFileProcessor::class);
+        $this->rectorConfig->singleton(__CLASS__, function () {
             return $this;
         });
-        $rectorConfig->sets([constant($levelSetList)]);
+        $this->rectorConfig->sets([constant($levelSetList)]);
+    }
 
-        $this->rectorConfig = $rectorConfig;
+    /**
+     * @return \Empaphy\Indirector\Processor\IncludeFileProcessor
+     */
+    public function getIncludeFileProcessor(): IncludeFileProcessor
+    {
+        return $this->rectorConfig->make(IncludeFileProcessor::class);
     }
 
     /**
@@ -86,7 +90,6 @@ final class RectorStreamWrapperConfig implements IncludeFileStreamWrapperConfig
     public function setCacheDirectory(string $cacheDirectory): self
     {
         $this->cacheDirectory = $cacheDirectory;
-
         $this->rectorConfig->cacheDirectory($cacheDirectory);
 
         return $this;

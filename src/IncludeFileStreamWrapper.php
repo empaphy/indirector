@@ -6,18 +6,18 @@
 
 declare(strict_types=1);
 
-namespace Empaphy\StreamWrapper;
+namespace Empaphy\Indirector;
 
-use Empaphy\StreamWrapper\Config\RectorStreamWrapperConfig;
-use Empaphy\StreamWrapper\Processor\IncludeFileProcessor;
+use Empaphy\Indirector\StreamWrapper\Config\IncludeFileStreamWrapperConfig;
+use Empaphy\Indirector\StreamWrapper\FileResourceWrapper;
+use Empaphy\Indirector\StreamWrapper\WrapsFileStream;
 use RuntimeException;
 use Throwable;
 
 /**
- * This PHP stream wrapper implements a `rectorfile://` protocol handler that allows one to use
- * [Rector](https://github.com/rectorphp/rector) to downgrade included PHP code on the fly.
+ * This file stream wrapper can be used to modify the PHP include files at runtime.
  */
-class RectorStreamWrapper implements SeekableResourceWrapper
+class IncludeFileStreamWrapper implements FileResourceWrapper
 {
     use WrapsFileStream {
         stream_open as _stream_open;
@@ -26,7 +26,7 @@ class RectorStreamWrapper implements SeekableResourceWrapper
     private const STREAM_OPEN_FOR_INCLUDE = 0x00000080;
 
     /**
-     * @var \Empaphy\StreamWrapper\Config\RectorStreamWrapperConfig
+     * @var \Empaphy\Indirector\StreamWrapper\Config\IncludeFileStreamWrapperConfig
      */
     private static $config;
 
@@ -40,20 +40,28 @@ class RectorStreamWrapper implements SeekableResourceWrapper
      */
     private static $registered = 0;
 
-    public static function initialize(?RectorStreamWrapperConfig $config = null): void
+    /**
+     * @param  \Empaphy\Indirector\StreamWrapper\Config\IncludeFileStreamWrapperConfig  $config
+     * @return void
+     */
+    public static function initialize(IncludeFileStreamWrapperConfig $config): void
     {
         if (false === self::$initialized) {
-            self::$config = $config ?? self::$config ?? new RectorStreamWrapperConfig();
+            self::$config      = $config;
             self::$initialized = true;
+        }
+
+        if (! self::register()) {
+            throw new RuntimeException('Failed to register stream wrapper.');
         }
     }
 
     /**
-     * @param  null|\Empaphy\StreamWrapper\Config\RectorStreamWrapperConfig $config
+     * Register this stream wrapper.
      *
-     * @return bool
+     * @return bool `true` on success or `false` on failure.
      */
-    public static function register(?RectorStreamWrapperConfig $config = null): bool
+    public static function register(): bool
     {
         if (self::$registered > 0) {
             return true;
@@ -61,45 +69,42 @@ class RectorStreamWrapper implements SeekableResourceWrapper
 
         stream_wrapper_unregister('file');
         self::$registered++;
-        $result = stream_wrapper_register('file', __CLASS__);
 
-        if (! $result) {
-            throw new RuntimeException('Failed to register stream wrapper.');
-        }
-
-        /** @noinspection PhpConditionAlreadyCheckedInspection */
-        return $result;
+        return stream_wrapper_register('file', __CLASS__);
     }
 
+    /**
+     * Unregister this stream wrapper by restoring the previously configure file stream wrapper.
+     *
+     * @return bool `true` on success or `false` on failure.
+     */
     public static function unregister(): bool
     {
         if (self::$registered <= 0) {
             return true;
         }
 
-        self::$registered = 0;
+        self::$registered--;
 
         return stream_wrapper_restore('file');
     }
 
     /**
-     * Opens an included PHP file and downgrades it to the currently running PHP version using Rector.
+     * Opens an included PHP file and processes it using the configured include file processor.
+     *
      * This method is called immediately after the wrapper is initialized (i.e. by `include`).
      *
-     * @param  string      $path          Specifies the path that was passed to the original function.
-     * @param  string      $mode          The mode used to open the file, as detailed for {@see fopen()}.
-     * @param  int         $options       Holds additional flags set by the streams API.
-     * @param  null|string $opened_path   If the path is opened successfully, and {@see STREAM_USE_PATH} is set in
+     * @param  string       $path         Specifies the path that was passed to the original function.
+     * @param  string       $mode         The mode used to open the file, as detailed for {@see fopen()}.
+     * @param  int          $options      Holds additional flags set by the streams API.
+     * @param  null|string  $opened_path  If the path is opened successfully, and {@see STREAM_USE_PATH} is set in
      *                                    options, `opened_path` should be set to the full path of the file/resource
      *                                    that was actually opened.
-     *
      * @return bool `true` on success or `false` on failure.
      */
     public function stream_open(string $path, string $mode, int $options, ?string &$opened_path): bool
     {
         self::unregister();
-
-        $container = self::$config->getRectorConfig();
 
         // Wrap all the code in this function in a try block, so we can
         // re-register the stream wrapper even if an exception is thrown.
@@ -108,8 +113,7 @@ class RectorStreamWrapper implements SeekableResourceWrapper
 
             if ($options & self::STREAM_OPEN_FOR_INCLUDE) {
                 try {
-                    /** @var \Empaphy\StreamWrapper\Processor\IncludeFileProcessor $processor */
-                    $processor = $container->get(IncludeFileProcessor::class);
+                    $processor = self::$config->getIncludeFileProcessor();
                     $content   = $processor->processFile($path);
                 } catch (Throwable $t) {
                     trigger_error($t->getMessage(), E_USER_WARNING);

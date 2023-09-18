@@ -3,11 +3,12 @@
 
 declare(strict_types=1);
 
-use Empaphy\StreamWrapper\RectorStreamWrapper;
+use Empaphy\Indirector\Config\RectorStreamWrapperConfig;
+use Empaphy\Indirector\IncludeFileStreamWrapper;
 
 require_once dirname(__DIR__) . '/vendor/autoload.php';
 
-RectorStreamWrapper::register();
+IncludeFileStreamWrapper::initialize(new RectorStreamWrapperConfig());
 
 include __DIR__ . '/includeme.php';
 

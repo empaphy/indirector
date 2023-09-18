@@ -2,42 +2,41 @@
 
 declare(strict_types=1);
 
-namespace Empaphy\StreamWrapper;
+namespace Empaphy\Indirector\StreamWrapper;
 
 /**
- * @property resource $context
+ * @property-read resource $context is updated if a valid context is passed to the caller function.
  */
 interface ResourceWrapper
 {
-    //    /**
-    //     * Close directory handle.
-    //     *
-    //     * This method is called in response to {@see closedir()}.
-    //     *
-    //     * Any resources which were locked, or allocated, during opening and use of
-    //     * the directory stream should be released.
-    //     */
-    //    public function dir_closedir(): bool;
-    //
-    //    public function dir_opendir(string $path, int $options): bool;
-    //
-    //    public function dir_readdir(): string;
-    //
-    //    public function dir_rewinddir(): bool;
-    //
-    //    public function mkdir(string $path, int $mode, int $options): bool;
-    //
-    //    public function rename(string $path_from, string $path_to): bool;
-    //
-    //    public function rmdir(string $path, int $options): bool;
-    //
-    //    public function stream_cast(int $cast_as);
-    //
-    //    public function stream_close(): void;
+    /**
+     * Retrieve the underlying resource.
+     *
+     * This method is called in response to {@see stream_select()}.
+     *
+     * @param  int  $cast_as  Can be {@see STREAM_CAST_FOR_SELECT} when {@see stream_select()} is calling
+     *                        {@see stream_cast()} or {@see STREAM_CAST_AS_STREAM} when {@see stream_cast()} is called
+     *                        for other uses.
+     * @return resource|false Should return the underlying stream resource used by the wrapper, or `false`.
+     */
+    public function stream_cast(int $cast_as);
+
+    /**
+     * Close a resource.
+     *
+     * This method is called in response to {@see fclose()}.
+     *
+     * All resources that were locked, or allocated, by the wrapper should be released.
+     *
+     * @return bool|void `true` on success, `false` on failure or `void` if ¯\_(ツ)_/¯.
+     */
+    public function stream_close();
 
     /**
      * Tests for end-of-file on a file pointer.
+     *
      * This method is called in response to {@see feof()}.
+     *
      * > **Warning:**
      * > When reading the whole file (for example, with {@see file_get_contents()}), PHP will call
      * > {@see static::stream_read()} followed by {@see static::stream_eof()} in a loop but as long as
@@ -49,12 +48,9 @@ interface ResourceWrapper
      */
     public function stream_eof(): bool;
 
-    //    public function stream_flush(): bool;
-    //
-    //    public function stream_lock(int $operation): bool;
-
     /**
      * Change stream metadata.
+     *
      * This method is called to set metadata on the stream. It is called when one of the following functions is called
      * on a stream URL:
      *   - {@see touch()}
@@ -88,16 +84,18 @@ interface ResourceWrapper
 
     /**
      * Opens file or URL.
+     *
      * This method is called immediately after the wrapper is initialized (e.g. by {@see fopen()} and
      * {@see file_get_contents()}).
      *
-     * @param  string      $path          Specifies the URL that was passed to the original function.
-     * @param  string      $mode          The mode used to open the file, as detailed for {@see fopen()}.
-     * @param  int         $options       Holds additional flags set by the streams API.
-     * @param  null|string $opened_path   If the path is opened successfully, and {@see STREAM_USE_PATH} is set in
+     * Emits {@see E_WARNING} if call to this method fails (i.e. not implemented).
+     *
+     * @param  string       $path         Specifies the URL that was passed to the original function.
+     * @param  string       $mode         The mode used to open the file, as detailed for {@see fopen()}.
+     * @param  int          $options      Holds additional flags set by the streams API.
+     * @param  null|string  $opened_path  If the path is opened successfully, and {@see STREAM_USE_PATH} is set in
      *                                    options, `opened_path` should be set to the full path of the file/resource
      *                                    that was actually opened.
-     *
      * @return bool `true` on success or `false` on failure.
      */
     public function stream_open(string $path, string $mode, int $options, ?string &$opened_path): bool;
@@ -137,14 +135,6 @@ interface ResourceWrapper
     public function stream_set_option(int $option, int $arg1, int $arg2): bool;
 
     /**
-     * Retrieve information about a file resource.
-     * This method is called in response to {@see fstat()}.
-     *
-     * @return array|false See {@see stat()}.
-     */
-    public function stream_stat();
-
-    /**
      * Retrieve the current position of a stream.
      * This method is called in response to {@see ftell()} to determine the current position.
      *
@@ -152,26 +142,13 @@ interface ResourceWrapper
      */
     public function stream_tell(): int;
 
-    //    public function stream_truncate(int $new_size): bool;
-
     /**
-     * Write to stream.
-     * This method is called in response to fwrite().
-     * > **Note:**
-     * > Remember to update the current position of the stream by number of bytes that were successfully written.
+     * Truncate stream.
      *
-     * @param  string $data   Should be stored into the underlying stream.
-     *                        > **Note:**
-     *                        > If there is not enough room in the underlying stream, store as much as possible.
+     * Will respond to truncation, e.g., through {@see ftruncate()}.
      *
-     * @return int Should return the number of bytes that were successfully stored, or 0 if none could be stored.
-     *             > **Note:**
-     *             > If the return value is greater than the length of $data, {@see E_WARNING} will be emitted and the
-     *             > return value will be truncated to its length.
+     * @param  int  $new_size  The new size.
+     * @return bool `true` on success or `false` on failure.
      */
-    public function stream_write(string $data): int;
-
-    //    public function unlink(string $path): bool;
-    //
-    //    public function url_stat(string $path, int $flags): array|false;
+    public function stream_truncate(int $new_size): bool;
 }

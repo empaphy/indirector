@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Empaphy\StreamWrapper;
+namespace Empaphy\Indirector;
 
 use php_user_filter;
 
@@ -12,24 +12,25 @@ use php_user_filter;
  *                                        determine which name was used.
  * @property-read  mixed     $params      The contents of the params parameter passed to {@see stream_filter_append()}
  *                                        or {@see stream_filter_prepend()}.
- * @property-read  resource  $stream      The stream resource being filtered. Maybe available only during {@see filter()} calls when the closing parameter is set to false.
+ * @property-read  resource $stream       The stream resource being filtered. Maybe available only during
+ *                                        {@see filter()} calls when the closing parameter is set to false.
  */
 class RectorStreamFilter extends php_user_filter
 {
     /**
-     * @param  resource  $in        A resource pointing to a _bucket brigade_ which contains one or more _bucket_
+     * @param  resource  $in        A resource pointing to a `bucket brigade` which contains one or more `bucket`
      *                              objects containing data to be filtered.
      * @param  resource  $out       A resource pointing to a second bucket brigade into which your modified buckets
      *                              should be placed.
-     * @param  int      &$consumed  Which must _always_ be declared by reference, should be incremented by the length of
+     * @param  int      &$consumed  Which must `always` be declared by reference, should be incremented by the length of
      *                              the data which your filter reads in and alters. In most cases this means you will
-     *                              increment consumed by _$bucket->datalen_ for each _$bucket_.
+     *                              increment consumed by `$bucket->datalen` for each `$bucket`.
      * @param  bool      $closing   If the stream is in the process of closing (and therefore this is the last pass
      *                              through the filterchain), the closing parameter will be set to `TRUE`.
      *
      * @return int The `filter()` method must return one of three values upon completion.
      *             {@see PSFS_PASS_ON}
-     *             : Filter processed successfully with data available in the `out` _bucket brigade_.
+     *             : Filter processed successfully with data available in the `out` `bucket brigade`.
      *             {@see PSFS_FEED_ME}
      *             : Filter processed successfully, however no data was available to return. More data is required from
      *               the stream or prior filter.

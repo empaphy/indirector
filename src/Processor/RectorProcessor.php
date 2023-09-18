@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Empaphy\StreamWrapper\Processor;
+namespace Empaphy\Indirector\Processor;
 
-use Empaphy\StreamWrapper\Config\RectorStreamWrapperConfig;
+use Empaphy\Indirector\Config\RectorStreamWrapperConfig;
 use Rector\Caching\Detector\ChangedFilesDetector;
 use Rector\ChangesReporting\Output\ConsoleOutputFormatter;
 use Rector\Core\Application\FileProcessor;
@@ -38,12 +38,12 @@ class RectorProcessor implements IncludeFileProcessor
     protected $fileProcessor;
 
     /**
-     * @var \Empaphy\StreamWrapper\Config\RectorStreamWrapperConfig
+     * @var \Empaphy\Indirector\Config\RectorStreamWrapperConfig
      */
     private $streamWrapperConfig;
 
     /**
-     * @param  \Empaphy\StreamWrapper\Config\RectorStreamWrapperConfig $config
+     * @param  \Empaphy\Indirector\Config\RectorStreamWrapperConfig $config
      * @param  \Rector\Caching\Detector\ChangedFilesDetector           $changedFilesDetector
      * @param  \Rector\Core\Provider\CurrentFileProvider               $currentFileProvider
      * @param  \Rector\Core\Application\FileProcessor                  $fileProcessor

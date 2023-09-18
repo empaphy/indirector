@@ -2,8 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Empaphy\StreamWrapper;
+namespace Empaphy\Indirector\StreamWrapper;
 
+/**
+ * @property-read resource $context is updated if a valid context is passed to the caller function.
+ */
 interface SeekableResourceWrapper extends ResourceWrapper
 {
     /**
