@@ -31,9 +31,22 @@ class RectorStreamWrapper implements SeekableResourceWrapper
     private static $config;
 
     /**
+     * @var bool
+     */
+    private static $initialized = false;
+
+    /**
      * @var int
      */
     private static $registered = 0;
+
+    public static function initialize(?RectorStreamWrapperConfig $config = null): void
+    {
+        if (false === self::$initialized) {
+            self::$config = $config ?? self::$config ?? new RectorStreamWrapperConfig();
+            self::$initialized = true;
+        }
+    }
 
     /**
      * @param  null|\Empaphy\StreamWrapper\Config\RectorStreamWrapperConfig $config
@@ -45,8 +58,6 @@ class RectorStreamWrapper implements SeekableResourceWrapper
         if (self::$registered > 0) {
             return true;
         }
-
-        self::$config = $config ?? self::$config ?? new RectorStreamWrapperConfig();
 
         stream_wrapper_unregister('file');
         self::$registered++;
@@ -62,14 +73,13 @@ class RectorStreamWrapper implements SeekableResourceWrapper
 
     public static function unregister(): bool
     {
-        $result = true;
-
-        if (self::$registered > 0) {
-            $result           = stream_wrapper_restore('file');
-            self::$registered = 0;
+        if (self::$registered <= 0) {
+            return true;
         }
 
-        return $result;
+        self::$registered = 0;
+
+        return stream_wrapper_restore('file');
     }
 
     /**
@@ -102,7 +112,7 @@ class RectorStreamWrapper implements SeekableResourceWrapper
                     $processor = $container->get(IncludeFileProcessor::class);
                     $content   = $processor->processFile($path);
                 } catch (Throwable $t) {
-                    // TODO: catch and log error somehow.
+                    trigger_error($t->getMessage(), E_USER_WARNING);
 
                     // Fall back to regular stream wrapper.
                     return $this->_stream_open($path, $mode, $options, $opened_path);
