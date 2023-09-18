@@ -18,14 +18,14 @@ use RuntimeException;
 class RectorProcessor implements IncludeFileProcessor
 {
     /**
-     * @var \Rector\Core\ValueObject\Configuration
-     */
-    protected $configuration;
-
-    /**
      * @var \Rector\Caching\Detector\ChangedFilesDetector
      */
     protected $changedFilesDetector;
+
+    /**
+     * @var \Rector\Core\ValueObject\Configuration
+     */
+    protected $configuration;
 
     /**
      * @var \Rector\Core\Provider\CurrentFileProvider
@@ -43,10 +43,10 @@ class RectorProcessor implements IncludeFileProcessor
     private $streamWrapperConfig;
 
     /**
-     * @param  \Empaphy\StreamWrapper\Config\RectorStreamWrapperConfig  $config
-     * @param  \Rector\Caching\Detector\ChangedFilesDetector            $changedFilesDetector
-     * @param  \Rector\Core\Provider\CurrentFileProvider                $currentFileProvider
-     * @param  \Rector\Core\Application\FileProcessor                   $fileProcessor
+     * @param  \Empaphy\StreamWrapper\Config\RectorStreamWrapperConfig $config
+     * @param  \Rector\Caching\Detector\ChangedFilesDetector           $changedFilesDetector
+     * @param  \Rector\Core\Provider\CurrentFileProvider               $currentFileProvider
+     * @param  \Rector\Core\Application\FileProcessor                  $fileProcessor
      */
     public function __construct(
         RectorStreamWrapperConfig $config,
@@ -58,10 +58,13 @@ class RectorProcessor implements IncludeFileProcessor
         $this->changedFilesDetector = $changedFilesDetector;
         $this->currentFileProvider  = $currentFileProvider;
         $this->fileProcessor        = $fileProcessor;
+
+        $this->configuration = new Configuration(true, false, false, ConsoleOutputFormatter::NAME, ['php'], [], false);
     }
 
     /**
      * @param  string $path
+     *
      * @return null|string
      */
     public function processFile(string $path): string
@@ -79,26 +82,30 @@ class RectorProcessor implements IncludeFileProcessor
         $file = new File($realpath, file_get_contents($realpath, true));
 
         $this->currentFileProvider->setFile($file);
-        $fileProcessResult = $this->fileProcessor->processFile(
-            $file,
-            new Configuration(true, false, false, ConsoleOutputFormatter::NAME, ['php'], [], false)
-        );
+
+        $fileProcessResult = $this->fileProcessor->processFile($file, $this->configuration);
 
         $systemErrors = $fileProcessResult->getSystemErrors();
+
         if ($systemErrors !== []) {
-            $systemErrorMessages = array_map(static function(SystemError $systemError) {
+            $systemErrorMessages = array_map(static function (SystemError $systemError) {
                 return $systemError->getMessage();
             }, $systemErrors);
+
             $this->changedFilesDetector->invalidateFile($file->getFilePath());
-            throw new RuntimeException(sprintf('File `%s` could not be processed:\n%s', $path, implode("\n", $systemErrorMessages)));
+
+            throw new RuntimeException(
+                sprintf('File `%s` could not be processed:\n%s', $path, implode("\n", $systemErrorMessages))
+            );
         }
 
-        if (!$this->configuration->isDryRun() || !$fileProcessResult->getFileDiff() instanceof FileDiff) {
+        if (! $this->configuration->isDryRun() || ! $fileProcessResult->getFileDiff() instanceof FileDiff) {
             $this->changedFilesDetector->cacheFile($file->getFilePath());
         }
 
         if ($file->hasChanged()) {
             $this->setFileCache($path, $file->getFileContent());
+
             return $file->getFileContent();
         }
 
