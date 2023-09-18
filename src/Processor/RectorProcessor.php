@@ -66,9 +66,9 @@ class RectorProcessor implements IncludeFileProcessor
      */
     public function processFile(string $path): string
     {
-//        if ($this->hasCachedFile($path)) {
-//            return $this->getCachedFile($path);
-//        }
+        if ($this->hasCachedFile($path)) {
+            return $this->getCachedFile($path);
+        }
 
         $realpath = stream_resolve_include_path($path);
 
@@ -97,73 +97,72 @@ class RectorProcessor implements IncludeFileProcessor
             $this->changedFilesDetector->cacheFile($file->getFilePath());
         }
 
-        // TODO: use Rector's own caching mechanism?
         if ($file->hasChanged()) {
-//            $this->setFileCache($path, $file->getFileContent());
+            $this->setFileCache($path, $file->getFileContent());
             return $file->getFileContent();
         }
 
-//        $this->setFileCache($path, '');
+        $this->setFileCache($path, '');
 
         return $file->getFileContent();
     }
 
-//    /**
-//     * @param  string $path
-//     *
-//     * @return null|string
-//     */
-//    private function getCacheFilePath(string $path): ?string
-//    {
-//        $cacheDirectory = $this->streamWrapperConfig->getCacheDirectory();
-//
-//        if (! $cacheDirectory) {
-//            return null;
-//        }
-//
-//        return $cacheDirectory . DIRECTORY_SEPARATOR . md5($path);
-//    }
-//
-//    /**
-//     * @param  string $path
-//     *
-//     * @return string
-//     */
-//    private function getCachedFile(string $path): string
-//    {
-//        return file_get_contents($this->getCacheFilePath($path));
-//    }
-//
-//    /**
-//     * @param  string $path
-//     *
-//     * @return bool
-//     */
-//    private function hasCachedFile(string $path): bool
-//    {
-//        $cachedFile = $this->getCacheFilePath($path);
-//
-//        if (! $cachedFile) {
-//            return false;
-//        }
-//
-//        return file_exists($cachedFile);
-//    }
-//
-//    /**
-//     * @param  string $path
-//     * @param  string $getFileContent
-//     *
-//     * @return void
-//     */
-//    private function setFileCache(string $path, string $getFileContent): void
-//    {
-//        $cachedFile = $this->getCacheFilePath($path);
-//
-//        if (! $cachedFile) {
-//            return;
-//        }
-//
-//        file_put_contents($cachedFile, $getFileContent);
-//    }
+    /**
+     * @param  string $path
+     *
+     * @return null|string
+     */
+    private function getCacheFilePath(string $path): ?string
+    {
+        $cacheDirectory = $this->streamWrapperConfig->getCacheDirectory();
+
+        if (! $cacheDirectory) {
+            return null;
+        }
+
+        return $cacheDirectory . DIRECTORY_SEPARATOR . md5($path);
+    }
+
+    /**
+     * @param  string $path
+     *
+     * @return string
+     */
+    private function getCachedFile(string $path): string
+    {
+        return file_get_contents($this->getCacheFilePath($path));
+    }
+
+    /**
+     * @param  string $path
+     *
+     * @return bool
+     */
+    private function hasCachedFile(string $path): bool
+    {
+        $cachedFile = $this->getCacheFilePath($path);
+
+        if (! $cachedFile) {
+            return false;
+        }
+
+        return file_exists($cachedFile);
+    }
+
+    /**
+     * @param  string $path
+     * @param  string $getFileContent
+     *
+     * @return void
+     */
+    private function setFileCache(string $path, string $getFileContent): void
+    {
+        $cachedFile = $this->getCacheFilePath($path);
+
+        if (! $cachedFile) {
+            return;
+        }
+
+        file_put_contents($cachedFile, $getFileContent);
+    }
 }
