@@ -36,16 +36,6 @@ class RectorStreamWrapper implements SeekableResourceWrapper
     private static $registered = 0;
 
     /**
-     * @var \Rector\Config\RectorConfig
-     */
-    private $rectorConfig;
-
-    /**
-     * @var \Rector\Core\ValueObject\Configuration
-     */
-    private $rectorConfiguration;
-
-    /**
      * @param  null|\Empaphy\StreamWrapper\Config\RectorStreamWrapperConfig $config
      *
      * @return bool
@@ -94,12 +84,12 @@ class RectorStreamWrapper implements SeekableResourceWrapper
      *                                    that was actually opened.
      *
      * @return bool `true` on success or `false` on failure.
-     * @throws \RectorPrefix202309\Psr\Container\ContainerExceptionInterface
-     * @throws \RectorPrefix202309\Psr\Container\NotFoundExceptionInterface
      */
     public function stream_open(string $path, string $mode, int $options, ?string &$opened_path): bool
     {
         self::unregister();
+
+        $container = self::$config->getRectorConfig();
 
         // Wrap all the code in this function in a try block, so we can
         // re-register the stream wrapper even if an exception is thrown.
@@ -109,7 +99,7 @@ class RectorStreamWrapper implements SeekableResourceWrapper
             if ($options & self::STREAM_OPEN_FOR_INCLUDE) {
                 try {
                     /** @var \Empaphy\StreamWrapper\Processor\IncludeFileProcessor $processor */
-                    $processor = $this->rectorConfig->get(IncludeFileProcessor::class);
+                    $processor = $container->get(IncludeFileProcessor::class);
                     $content   = $processor->processFile($path);
                 } catch (Throwable $t) {
                     // TODO: catch and log error somehow.
