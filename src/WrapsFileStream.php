@@ -6,8 +6,21 @@ namespace Empaphy\StreamWrapper;
 
 use RuntimeException;
 
+/**
+ * Implements the stream wrapper interface for a file stream.
+ */
 trait WrapsFileStream
 {
+    /**
+     * The current context, or null if no context was passed to the caller function.
+     *
+     * Use the stream_context_get_options() to parse the context.
+     *
+     * > **Note:**
+     * > This property must be public so PHP can populate it with the actual context resource.
+     *
+     * @var resource|null
+     */
     public $context;
 
     /**
@@ -17,16 +30,16 @@ trait WrapsFileStream
 
     /**
      * Opens file.
+     *
      * This method is called immediately after the wrapper is initialized (e.g. by {@see fopen()} and
      * {@see file_get_contents()}).
      *
-     * @param  string      $path          Specifies the path that was passed to the original function.
-     * @param  string      $mode          The mode used to open the file, as detailed for {@see fopen()}.
-     * @param  int         $options       Holds additional flags set by the streams API.
-     * @param  null|string $opened_path   If the path is opened successfully, and {@see STREAM_USE_PATH} is set in
+     * @param  string       $path         Specifies the path that was passed to the original function.
+     * @param  string       $mode         The mode used to open the file, as detailed for {@see fopen()}.
+     * @param  int          $options      Holds additional flags set by the streams API.
+     * @param  string|null  $opened_path  If the path is opened successfully, and {@see STREAM_USE_PATH} is set in
      *                                    options, `opened_path` should be set to the full path of the file/resource
      *                                    that was actually opened.
-     *
      * @return bool `true` on success or `false` on failure.
      */
     public function stream_open(string $path, string $mode, int $options, ?string &$opened_path): bool
@@ -49,24 +62,19 @@ trait WrapsFileStream
     /**
      * Read the included PHP file.
      *
-     * @param  int $count How many bytes of data from the current position should be returned.
-     *
+     * @param  int  $count  How many bytes of data from the current position should be returned.
      * @return string|false If there are less than $count bytes available, as many as are available should be returned.
      *                      If no more data is available, an empty string should be returned.
      *                      To signal that reading failed, false should be returned.
      */
     public function stream_read(int $count)
     {
-        /** @noinspection OneTimeUseVariablesInspection
-         * @noinspection PhpUnnecessaryLocalVariableInspection
-         */
-        $contents = fread($this->handle, $count);
-
-        return $contents;
+        return fread($this->handle, $count);
     }
 
     /**
      * Retrieve information about a file resource.
+     *
      * This method is called in response to {@see fstat()}.
      *
      * @return array|false See {@see stat()}.
@@ -78,13 +86,13 @@ trait WrapsFileStream
 
     /**
      * Change stream options.
+     *
      * This method is called to set options on the stream.
      *
      * @param  int $option
      * @param  int $arg1
      * @param  int $arg2
-     *
-     * @return bool `true` on success or `false` on failure. If $option is not implemented, false should be returned.
+     * @return bool `true` on success or `false` on failure. If $option is not implemented, `false` should be returned.
      */
     public function stream_set_option(int $option, int $arg1, int $arg2): bool
     {
@@ -117,14 +125,15 @@ trait WrapsFileStream
 
     /**
      * Write to stream.
+     *
      * This method is called in response to fwrite().
+     *
      * > **Note:**
      * > Remember to update the current position of the stream by number of bytes that were successfully written.
      *
      * @param  string $data   Should be stored into the underlying stream.
      *                        > **Note:**
      *                        > If there is not enough room in the underlying stream, store as much as possible.
-     *
      * @return int Should return the number of bytes that were successfully stored, or 0 if none could be stored.
      *             > **Note:**
      *             > If the return value is greater than the length of $data, {@see E_WARNING} will be emitted and the
@@ -139,7 +148,7 @@ trait WrapsFileStream
      * Tests for end-of-file on a file pointer.
      *
      * @return bool `true` if the read/write position is at the end of the stream and if no more data is available to be
-     *              read, or false otherwise.
+     *              read, or `false` otherwise.
      */
     public function stream_eof(): bool
     {
@@ -151,10 +160,9 @@ trait WrapsFileStream
      *
      * @param  int $offset     The stream offset to seek to.
      * @param  int $whence     Possible values:
-     *                         - {@see SEEK_SET} - Set position equal to $offset bytes.
-     *                         - {@see SEEK_CUR} - Set position to current location plus $offset.
-     *                         - {@see SEEK_END} - Set position to end-of-file plus $offset.
-     *
+     *                           - {@see SEEK_SET} - Set position equal to $offset bytes.
+     *                           - {@see SEEK_CUR} - Set position to current location plus $offset.
+     *                           - {@see SEEK_END} - Set position to end-of-file plus $offset.
      * @return bool `true` if the position was updated, `false` otherwise.
      */
     public function stream_seek(int $offset, int $whence = SEEK_SET): bool
@@ -164,33 +172,36 @@ trait WrapsFileStream
 
     /**
      * Change stream metadata.
-     * This method is called to set metadata on the stream. It is called when one of the following functions is called
-     * on a stream URL:
+     *
+     * This method is called to set metadata on the stream. It is called when
+     * one of the following functions is called on a stream URL:
+     *
      *   - {@see touch()}
      *   - {@see chmod()}
      *   - {@see chown()}
      *   - {@see chgrp()}
-     * Please note that some of these operations may not be available on your system.
      *
-     * @param  string $path         The file path or URL to set metadata. Note that in the case of a URL, it must be a ://
-     *                              delimited URL. Other URL forms are not supported.
-     * @param  int    $option       One of:
-     *                              - {@see STREAM_META_TOUCH} (The method was called in response to {@see touch()})
-     *                              - {@see STREAM_META_OWNER_NAME} (The method was called in response to {@see chown()}
+     * Please note that some of these operations may not be available on your
+     * system.
+     *
+     * @param  string  $path    The file path or URL to set metadata. Note that in the case of a URL, it must be a ://
+     *                          delimited URL. Other URL forms are not supported.
+     * @param  int     $option  One of:
+     *                            - {@see STREAM_META_TOUCH} (The method was called in response to {@see touch()})
+     *                            - {@see STREAM_META_OWNER_NAME} (The method was called in response to {@see chown()}
      *                              with string parameter)
-     *                              - {@see STREAM_META_OWNER} (The method was called in response to {@see chown()})
-     *                              - {@see STREAM_META_GROUP_NAME} (The method was called in response to {@see chgrp()})
-     *                              - {@see STREAM_META_GROUP} (The method was called in response to {@see chgrp()})
-     *                              - {@see STREAM_META_ACCESS} (The method was called in response to {@see chmod()})
-     * @param  mixed  $value        If option is
-     *                              - {@see STREAM_META_TOUCH}: Array consisting of two arguments of the {@see touch()}
+     *                            - {@see STREAM_META_OWNER} (The method was called in response to {@see chown()})
+     *                            - {@see STREAM_META_GROUP_NAME} (The method was called in response to {@see chgrp()})
+     *                            - {@see STREAM_META_GROUP} (The method was called in response to {@see chgrp()})
+     *                            - {@see STREAM_META_ACCESS} (The method was called in response to {@see chmod()})
+     * @param  mixed   $value   If option is
+     *                            - {@see STREAM_META_TOUCH}: Array consisting of two arguments of the {@see touch()}
      *                              function.
-     *                              - {@see STREAM_META_OWNER_NAME} or {@see STREAM_META_GROUP_NAME}: The name of the owner
+     *                            - {@see STREAM_META_OWNER_NAME} or {@see STREAM_META_GROUP_NAME}: The name of the owner
      *                              user/group as string.
-     *                              - {@see STREAM_META_OWNER} or {@see STREAM_META_GROUP}: The value owner user/group
+     *                            - {@see STREAM_META_OWNER} or {@see STREAM_META_GROUP}: The value owner user/group
      *                              argument as int.
-     *                              - {@see STREAM_META_ACCESS}: The argument of the {@see chmod()} as int.
-     *
+     *                            - {@see STREAM_META_ACCESS}: The argument of the {@see chmod()} as int.
      * @return bool `true` on success or `false` on failure. If $option is not implemented, `false` should be returned.
      */
     public function stream_metadata(string $path, int $option, $value): bool

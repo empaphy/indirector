@@ -1,52 +1,59 @@
 <?php
-/** @noinspection PhpUnused */
+
+/**
+ * @noinspection PhpUnused
+ * @noinspection UnknownInspectionInspection
+ */
 
 declare(strict_types=1);
 
 namespace Empaphy\StreamWrapper\Config;
 
-use Empaphy\StreamWrapper\Processor\ForkedRectorProcessor;
+use Empaphy\StreamWrapper\Processor\IncludeFileProcessor;
 use Empaphy\StreamWrapper\Processor\RectorProcessor;
-use Rector\Caching\ValueObject\Storage\FileCacheStorage;
+use Rector\ChangesReporting\Output\ConsoleOutputFormatter;
 use Rector\Config\RectorConfig;
-use Rector\Core\DependencyInjection\LazyContainerFactory;
+use Rector\Core\DependencyInjection\RectorContainerFactory;
+use Rector\Core\ValueObject\Bootstrap\BootstrapConfigs;
+use Rector\Core\ValueObject\Configuration;
 use Rector\Set\ValueObject\DowngradeLevelSetList;
 
-final class RectorStreamWrapperConfig
+final class RectorStreamWrapperConfig implements IncludeFileStreamWrapperConfig
 {
-    /**
-     * @var null|string
-     */
-    private $cacheDirectory;
-
     /**
      * @var \Rector\Config\RectorConfig
      */
-    private $container;
+    private $rectorConfig;
 
-    /**
-     * @var string
-     */
-    private $rootDirectory;
+//    /**
+//     * @var string
+//     */
+//    private $rootDirectory;
+
+//    /**
+//     * @var null|string
+//     */
+//    private $cacheDirectory;
 
     public function __construct()
     {
-        $factory = new LazyContainerFactory();
+        $levelSetList = DowngradeLevelSetList::class . '::DOWN_TO_PHP_' . PHP_MAJOR_VERSION . PHP_MINOR_VERSION;
 
-        $this->container = $factory->create();
+        $bootstrapConfigs       = new BootstrapConfigs(null, []);
+        $rectorContainerFactory = new RectorContainerFactory();
 
-        $levelSetList = 'DOWN_TO_PHP_' . PHP_MAJOR_VERSION . PHP_MINOR_VERSION;
+        /** @var \Rector\Config\RectorConfig $rectorConfig */
+        $rectorConfig = $rectorContainerFactory->createFromBootstrapConfigs($bootstrapConfigs);
 
-        $this->processorClass(ForkedRectorProcessor::class);
-
-        $this->container->cacheClass(FileCacheStorage::class);
-        $this->container->sets([
-            constant(DowngradeLevelSetList::class . '::' . $levelSetList),
-        ]);
-
-        $this->container->singleton(__CLASS__, function () {
+        $rectorConfig->singleton(IncludeFileProcessor::class, function () {
+            return $this->rectorConfig->make(RectorProcessor::class);
+        });
+        $rectorConfig->singleton(__CLASS__, function () {
             return $this;
         });
+        $rectorConfig->sets([constant($levelSetList)]);
+
+        $this->rectorConfig = $rectorConfig;
     }
 
     /**
@@ -56,73 +63,57 @@ final class RectorStreamWrapperConfig
      */
     public function configureRector(callable $callable): self
     {
-        $callable($this->container);
+        $callable($this->rectorConfig);
 
         return $this;
-    }
-
-    /**
-     * @return null|string
-     */
-    public function getCacheDirectory(): ?string
-    {
-        return $this->cacheDirectory;
     }
 
     /**
      * @return \Rector\Config\RectorConfig
      * @internal
      */
-    public function getContainer(): RectorConfig
+    public function getRectorConfig(): RectorConfig
     {
-        return $this->container;
+        return $this->rectorConfig;
     }
 
-    /**
-     * @return string
-     */
-    public function getRootDirectory(): string
-    {
-        return $this->rootDirectory;
-    }
+//    /**
+//     * @return string
+//     */
+//    public function getRootDirectory(): string
+//    {
+//        return $this->rootDirectory;
+//    }
+//
+//    /**
+//     * @param  string  $rootDirectory
+//     * @return $this
+//     */
+//    public function setRootDirectory(string $rootDirectory): self
+//    {
+//        $this->rootDirectory = $rootDirectory;
+//
+//        return $this;
+//    }
 
-    /**
-     * @param  string $class
-     *
-     * @return $this
-     */
-    public function processorClass(string $class): self
-    {
-        $this->container->singleton(RectorProcessor::class, function () use ($class) {
-            return $this->container->make($class);
-        });
-
-        return $this;
-    }
-
-    /**
-     * @param  string $cacheDirectory
-     *
-     * @return $this
-     */
-    public function setCacheDirectory(string $cacheDirectory): self
-    {
-        $this->cacheDirectory = $cacheDirectory;
-
-        $this->container->cacheDirectory($cacheDirectory);
-
-        return $this;
-    }
-
-    /**
-     * @param  string $rootDirectory
-     *
-     * @return $this
-     */
-    public function setRootDirectory(string $rootDirectory): self
-    {
-        $this->rootDirectory = $rootDirectory;
-
-        return $this;
-    }
+//    /**
+//     * @return null|string
+//     */
+//    public function getCacheDirectory(): ?string
+//    {
+//        return $this->cacheDirectory;
+//    }
+//
+//    /**
+//     * @param  string  $cacheDirectory
+//     * @return $this
+//     */
+//    public function setCacheDirectory(string $cacheDirectory): self
+//    {
+//        $this->cacheDirectory = $cacheDirectory;
+//
+//        $this->rectorConfig->cacheDirectory($cacheDirectory);
+//
+//        return $this;
+//    }
 }

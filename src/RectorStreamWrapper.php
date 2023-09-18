@@ -9,12 +9,9 @@ declare(strict_types=1);
 namespace Empaphy\StreamWrapper;
 
 use Empaphy\StreamWrapper\Config\RectorStreamWrapperConfig;
-use Empaphy\StreamWrapper\Processor\RectorProcessor;
-use Rector\ChangesReporting\Output\ConsoleOutputFormatter;
-use Rector\Core\Application\FileProcessor;
-use Rector\Core\Provider\CurrentFileProvider;
-use Rector\Core\ValueObject\Configuration;
+use Empaphy\StreamWrapper\Processor\IncludeFileProcessor;
 use RuntimeException;
+use Throwable;
 
 /**
  * This PHP stream wrapper implements a `rectorfile://` protocol handler that allows one to use
@@ -39,24 +36,14 @@ class RectorStreamWrapper implements SeekableResourceWrapper
     private static $registered = 0;
 
     /**
-     * @var \RectorPrefix202309\Psr\Container\ContainerInterface
+     * @var \Rector\Config\RectorConfig
      */
-    private $rectorContainer;
-
-    /**
-     * @var \Rector\Core\Application\FileProcessor
-     */
-    private $rectorFileProcessor;
+    private $rectorConfig;
 
     /**
      * @var \Rector\Core\ValueObject\Configuration
      */
     private $rectorConfiguration;
-
-    /**
-     * @var \Rector\Core\Provider\CurrentFileProvider
-     */
-    private $rectorCurrentFileProvider;
 
     /**
      * @param  null|\Empaphy\StreamWrapper\Config\RectorStreamWrapperConfig $config
@@ -114,56 +101,31 @@ class RectorStreamWrapper implements SeekableResourceWrapper
     {
         self::unregister();
 
-        if (! $this->rectorContainer) {
-            $this->setupRector();
-        }
-
-        $content   = null;
-        $including = $options & self::STREAM_OPEN_FOR_INCLUDE;
-
+        // Wrap all the code in this function in a try block, so we can
+        // re-register the stream wrapper even if an exception is thrown.
         try {
-            if ($including) {
-                /** @var \Empaphy\StreamWrapper\Processor\RectorProcessor $processor */
-                $processor = $this->rectorContainer->get(RectorProcessor::class);
-                $content   = $processor->process($path);
-            }
+            $content = null;
 
-            if (null === $content) {
-                return $this->_stream_open($path, $mode, $options, $opened_path);
+            if ($options & self::STREAM_OPEN_FOR_INCLUDE) {
+                try {
+                    /** @var \Empaphy\StreamWrapper\Processor\IncludeFileProcessor $processor */
+                    $processor = $this->rectorConfig->get(IncludeFileProcessor::class);
+                    $content   = $processor->processFile($path);
+                } catch (Throwable $t) {
+                    // TODO: catch and log error somehow.
+
+                    // Fall back to regular stream wrapper.
+                    return $this->_stream_open($path, $mode, $options, $opened_path);
+                }
             }
 
             $this->handle = fopen('php://memory', 'rb+');
-
             fwrite($this->handle, $content);
             rewind($this->handle);
+
+            return $this->handle !== false;
         } finally {
             self::register();
         }
-
-        return $this->handle !== false;
-    }
-
-    /**
-     * @return void
-     * @throws \RectorPrefix202309\Psr\Container\ContainerExceptionInterface
-     * @throws \RectorPrefix202309\Psr\Container\NotFoundExceptionInterface
-     */
-    protected function setupRector(): void
-    {
-        $this->rectorContainer = self::$config->getContainer();
-        $this->rectorContainer->boot();
-
-        $this->rectorCurrentFileProvider = $this->rectorContainer->get(CurrentFileProvider::class);
-        $this->rectorFileProcessor       = $this->rectorContainer->get(FileProcessor::class);
-
-        $this->rectorConfiguration = new Configuration(
-            true,
-            false,
-            false,
-            ConsoleOutputFormatter::NAME,
-            ['php'],
-            [],
-            false
-        );
     }
 }

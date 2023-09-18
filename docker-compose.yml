@@ -1,0 +1,9 @@
+services:
+  php-7.2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      XDEBUG_MODE: "develop"
+    volumes:
+      - { type: bind, source: ., target: /opt/project }
