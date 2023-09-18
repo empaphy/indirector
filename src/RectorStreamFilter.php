@@ -7,13 +7,12 @@ namespace Empaphy\StreamWrapper;
 use php_user_filter;
 
 /**
- * @property-read  string   $filtername  A string containing the name the filter was instantiated with. Filters may be
- *                                        registered under multiple names or under wildcards. Use this property to determine
- *                                        which name was used.
- * @property-read  mixed    $params      The contents of the params parameter passed to {@see stream_filter_append()} or
- *                                        {@see stream_filter_prepend()}.
- * @property-read  resource $stream      The stream resource being filtered. Maybe available only during
- *                                        {@see filter()} calls when the closing parameter is set to false.
+ * @property-read  string    $filtername  A string containing the name the filter was instantiated with. Filters may be
+ *                                        registered under multiple names or under wildcards. Use this property to
+ *                                        determine which name was used.
+ * @property-read  mixed     $params      The contents of the params parameter passed to {@see stream_filter_append()}
+ *                                        or {@see stream_filter_prepend()}.
+ * @property-read  resource  $stream      The stream resource being filtered. Maybe available only during {@see filter()} calls when the closing parameter is set to false.
  */
 class RectorStreamFilter extends php_user_filter
 {
