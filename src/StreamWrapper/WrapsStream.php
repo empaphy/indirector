@@ -28,7 +28,7 @@ trait WrapsStream
      *
      * @var resource|false
      */
-    private $handle = false;
+    protected $handle = false;
 
     /**
      * Retrieve the underlying resource.

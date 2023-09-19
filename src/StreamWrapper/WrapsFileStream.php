@@ -9,7 +9,9 @@ namespace Empaphy\Indirector\StreamWrapper;
  */
 trait WrapsFileStream
 {
-    use WrapsSeekableStream, WrapsWriteableStream;
+    use WrapsDirectoryStream;
+    use WrapsSeekableStream;
+    use WrapsWriteableStream;
 
     /**
      * Renames a file or directory.

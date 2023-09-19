@@ -11,14 +11,19 @@ interface SeekableResourceWrapper extends ResourceWrapper
 {
     /**
      * Seeks to specific location in a stream.
+     *
      * This method is called in response to {@see fseek()}.
+     *
      * The read/write position of the stream should be updated according to the $offset and $whence.
+     *
+     * > **Note:**
+     * > If not implemented, false is assumed as the return value.
      *
      * @param  int $offset     The stream offset to seek to.
      * @param  int $whence     Possible values:
-     *                         - {@see SEEK_SET} - Set position equal to $offset bytes.
-     *                         - {@see SEEK_CUR} - Set position to current location plus $offset.
-     *                         - {@see SEEK_END} - Set position to end-of-file plus $offset.
+     *                           - {@see SEEK_SET} - Set position equal to $offset bytes.
+     *                           - {@see SEEK_CUR} - Set position to current location plus $offset.
+     *                           - {@see SEEK_END} - Set position to end-of-file plus $offset.
      *
      * @return bool `true` if the position was updated, `false` otherwise.
      */

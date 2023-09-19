@@ -7,7 +7,7 @@ namespace Empaphy\Indirector\StreamWrapper;
 /**
  * @property-read resource $context is updated if a valid context is passed to the caller function.
  */
-interface FileResourceWrapper extends SeekableResourceWrapper, WriteableResourceWrapper
+interface FileResourceWrapper extends SeekableResourceWrapper, WriteableResourceWrapper, DirectoryResourceWrapper
 {
     /**
      * Renames a file or directory.

@@ -9,20 +9,15 @@ declare(strict_types=1);
 namespace Empaphy\Indirector;
 
 use Empaphy\Indirector\StreamWrapper\Config\IncludeFileStreamWrapperConfig;
-use Empaphy\Indirector\StreamWrapper\FileResourceWrapper;
-use Empaphy\Indirector\StreamWrapper\WrapsFileStream;
+use Empaphy\Indirector\StreamWrapper\FileStreamWrapper;
 use RuntimeException;
 use Throwable;
 
 /**
  * This file stream wrapper can be used to modify the PHP include files at runtime.
  */
-class IncludeFileStreamWrapper implements FileResourceWrapper
+class IncludeFileStreamWrapper extends FileStreamWrapper
 {
-    use WrapsFileStream {
-        stream_open as _stream_open;
-    }
-
     private const STREAM_OPEN_FOR_INCLUDE = 0x00000080;
 
     /**
@@ -34,11 +29,6 @@ class IncludeFileStreamWrapper implements FileResourceWrapper
      * @var bool
      */
     private static $initialized = false;
-
-    /**
-     * @var int
-     */
-    private static $registered = 0;
 
     /**
      * @param  \Empaphy\Indirector\StreamWrapper\Config\IncludeFileStreamWrapperConfig  $config
@@ -54,39 +44,6 @@ class IncludeFileStreamWrapper implements FileResourceWrapper
         if (! self::register()) {
             throw new RuntimeException('Failed to register stream wrapper.');
         }
-    }
-
-    /**
-     * Register this stream wrapper.
-     *
-     * @return bool `true` on success or `false` on failure.
-     */
-    public static function register(): bool
-    {
-        if (self::$registered > 0) {
-            return true;
-        }
-
-        stream_wrapper_unregister('file');
-        self::$registered++;
-
-        return stream_wrapper_register('file', __CLASS__);
-    }
-
-    /**
-     * Unregister this stream wrapper by restoring the previously configure file stream wrapper.
-     *
-     * @return bool `true` on success or `false` on failure.
-     */
-    public static function unregister(): bool
-    {
-        if (self::$registered <= 0) {
-            return true;
-        }
-
-        self::$registered--;
-
-        return stream_wrapper_restore('file');
     }
 
     /**
@@ -116,10 +73,10 @@ class IncludeFileStreamWrapper implements FileResourceWrapper
                     $processor = self::$config->getIncludeFileProcessor();
                     $content   = $processor->processFile($path);
                 } catch (Throwable $t) {
-                    trigger_error($t->getMessage(), E_USER_WARNING);
+                    trigger_error("{$t->getMessage()}\n{$t->getTraceAsString()}", E_USER_WARNING);
 
                     // Fall back to regular stream wrapper.
-                    return $this->_stream_open($path, $mode, $options, $opened_path);
+                    return parent::stream_open($path, $mode, $options, $opened_path);
                 }
             }
 
