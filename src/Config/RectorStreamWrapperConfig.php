@@ -12,9 +12,11 @@ namespace Empaphy\Indirector\Config;
 use Empaphy\Indirector\Processor\IncludeFileProcessor;
 use Empaphy\Indirector\Processor\RectorProcessor;
 use Empaphy\Indirector\StreamWrapper\Config\IncludeFileStreamWrapperConfig;
+use PHPStan\Php\PhpVersion;
 use Rector\Config\RectorConfig;
 use Rector\Core\DependencyInjection\RectorContainerFactory;
 use Rector\Core\ValueObject\Bootstrap\BootstrapConfigs;
+use Rector\Core\ValueObject\PhpVersion as PhpVersionId;
 use Rector\Set\ValueObject\DowngradeLevelSetList;
 
 final class RectorStreamWrapperConfig implements IncludeFileStreamWrapperConfig
@@ -37,7 +39,7 @@ final class RectorStreamWrapperConfig implements IncludeFileStreamWrapperConfig
         $rectorContainerFactory = new RectorContainerFactory();
 
         $this->rectorConfig = $rectorContainerFactory->createFromBootstrapConfigs($bootstrapConfigs);
-
+        $this->rectorConfig->phpstanConfig(dirname(__DIR__, 2) . '/phpstan.neon');
         $this->rectorConfig->alias(RectorProcessor::class, IncludeFileProcessor::class);
         $this->rectorConfig->singleton(__CLASS__, function () {
             return $this;
