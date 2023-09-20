@@ -7,8 +7,7 @@ namespace Empaphy\Indirector\StreamWrapper;
 /**
  * Minimal implementation of a PHP stream wrapper.
  */
-class StreamWrapper implements ResourceWrapper
+abstract class StreamWrapper implements ResourceWrapper
 {
-    use OverridesStreamWrapper;
     use WrapsStream;
 }

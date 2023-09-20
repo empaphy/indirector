@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Empaphy\Indirector\Processor;
 
-use Empaphy\Indirector\Config\RectorStreamWrapperConfig;
+use Empaphy\Indirector\Indirector;
 use Rector\Caching\Detector\ChangedFilesDetector;
 use Rector\ChangesReporting\Output\ConsoleOutputFormatter;
 use Rector\Core\Application\FileProcessor;
+use Rector\Core\Configuration\Option;
+use Rector\Core\Configuration\Parameter\SimpleParameterProvider;
 use Rector\Core\Provider\CurrentFileProvider;
 use Rector\Core\ValueObject\Application\File;
 use Rector\Core\ValueObject\Configuration;
@@ -38,23 +40,23 @@ class RectorProcessor implements IncludeFileProcessor
     protected $fileProcessor;
 
     /**
-     * @var \Empaphy\Indirector\Config\RectorStreamWrapperConfig
+     * @var \Empaphy\Indirector\Indirector
      */
-    private $streamWrapperConfig;
+    private $indirector;
 
     /**
-     * @param  \Empaphy\Indirector\Config\RectorStreamWrapperConfig $config
-     * @param  \Rector\Caching\Detector\ChangedFilesDetector           $changedFilesDetector
-     * @param  \Rector\Core\Provider\CurrentFileProvider               $currentFileProvider
-     * @param  \Rector\Core\Application\FileProcessor                  $fileProcessor
+     * @param  \Empaphy\Indirector\Indirector                 $indirector
+     * @param  \Rector\Caching\Detector\ChangedFilesDetector  $changedFilesDetector
+     * @param  \Rector\Core\Provider\CurrentFileProvider      $currentFileProvider
+     * @param  \Rector\Core\Application\FileProcessor         $fileProcessor
      */
     public function __construct(
-        RectorStreamWrapperConfig $config,
-        ChangedFilesDetector      $changedFilesDetector,
-        CurrentFileProvider       $currentFileProvider,
-        FileProcessor             $fileProcessor
+        Indirector           $indirector,
+        ChangedFilesDetector $changedFilesDetector,
+        CurrentFileProvider  $currentFileProvider,
+        FileProcessor        $fileProcessor
     ) {
-        $this->streamWrapperConfig  = $config;
+        $this->indirector           = $indirector;
         $this->changedFilesDetector = $changedFilesDetector;
         $this->currentFileProvider  = $currentFileProvider;
         $this->fileProcessor        = $fileProcessor;
@@ -73,20 +75,11 @@ class RectorProcessor implements IncludeFileProcessor
             return $this->getCachedFile($path);
         }
 
-        $realpath = stream_resolve_include_path($path);
-
-        if (false === $realpath) {
-            throw new RuntimeException(sprintf('File `%s` not found in include path.', $path));
-        }
-
-        $file = new File($realpath, file_get_contents($realpath, true));
-
+        $file = new File($path, file_get_contents($path, true));
         $this->currentFileProvider->setFile($file);
-
         $fileProcessResult = $this->fileProcessor->processFile($file, $this->configuration);
 
         $systemErrors = $fileProcessResult->getSystemErrors();
-
         if ($systemErrors !== []) {
             $systemErrorMessages = array_map(static function (SystemError $systemError) {
                 return $systemError->getMessage();
@@ -121,7 +114,7 @@ class RectorProcessor implements IncludeFileProcessor
      */
     private function getCacheFilePath(string $path): ?string
     {
-        $cacheDirectory = $this->streamWrapperConfig->getCacheDirectory();
+        $cacheDirectory = SimpleParameterProvider::provideStringParameter(Option::CACHE_DIR);
 
         if (! $cacheDirectory) {
             return null;

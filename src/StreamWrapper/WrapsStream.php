@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Empaphy\Indirector\StreamWrapper;
 
-use RuntimeException;
-
 /**
  * @implements \Empaphy\Indirector\StreamWrapper\ResourceWrapper
  */
@@ -56,7 +54,10 @@ trait WrapsStream
      */
     public function stream_close(): bool
     {
-        return fclose($this->handle);
+        $result = fclose($this->handle);
+        $this->handle = false;
+
+        return $result;
     }
 
     /**
@@ -106,42 +107,27 @@ trait WrapsStream
      */
     public function stream_metadata(string $path, int $option, $value): bool
     {
-        self::unregister();
+        switch ($option) {
+            case STREAM_META_TOUCH:
+                if ($value) {
+                    return touch($path, ...$value);
+                }
+                return touch($path);
 
-        $return = false;
+            case STREAM_META_OWNER_NAME:
+            case STREAM_META_OWNER:
+                return chown($path, $value);
 
-        try {
-            switch ($option) {
-                case STREAM_META_TOUCH:
-                    if (empty($value)) {
-                        $return = touch($path);
-                    } else {
-                        $return = touch($path, ...$value);
-                    }
-                    break;
+            case STREAM_META_GROUP_NAME:
+            case STREAM_META_GROUP:
+                return chgrp($path, $value);
 
-                case STREAM_META_OWNER_NAME:
-                case STREAM_META_OWNER:
-                    $return = chown($path, $value);
-                    break;
+            case STREAM_META_ACCESS:
+                return chmod($path, $value);
 
-                case STREAM_META_GROUP_NAME:
-                case STREAM_META_GROUP:
-                    $return = chgrp($path, $value);
-                    break;
-
-                case STREAM_META_ACCESS:
-                    $return = chmod($path, $value);
-                    break;
-
-                default:
-                    throw new RuntimeException('Unknown stream_metadata option');
-            }
-        } finally {
-            self::register();
+            default:
+                return false;
         }
-
-        return $return;
     }
 
     /**
@@ -160,56 +146,20 @@ trait WrapsStream
      */
     public function stream_open(string $path, string $mode, int $options, ?string &$opened_path): bool
     {
-        self::unregister();
+        $use_include_path = (bool) ($options & STREAM_USE_PATH);
+        $report_errors    = (bool) ($options & STREAM_REPORT_ERRORS);
 
-        try {
-            $use_include_path = (bool) ($options & STREAM_USE_PATH);
-            $report_errors    = (bool) ($options & STREAM_REPORT_ERRORS);
+        $this->handle = static::fopen($path, $mode, $use_include_path, $report_errors, $this->context);
 
-            $this->handle = self::fopen($path, $mode, $use_include_path, $report_errors, $this->context);
-
-            if (false === $this->handle) {
-                return false;
-            }
-
-            if ($use_include_path) {
-                $opened_path = stream_resolve_include_path($path);
-            }
-
-            return true;
-        } finally {
-            self::register();
-        }
-    }
-
-    /**
-     * @param  string         $filename
-     * @param  string         $mode
-     * @param  bool           $use_include_path
-     * @param  bool           $report_errors
-     * @param  resource|null  $context
-     * @return false|resource
-     */
-    private static function fopen(
-        string $filename,
-        string $mode,
-        bool $use_include_path,
-        bool $report_errors,
-        $context = null
-    ) {
-        if (! $report_errors) {
-            if (null === $context) {
-                return @fopen($filename, $mode, $use_include_path);
-            }
-
-            return @fopen($filename, $mode, $use_include_path, $context);
+        if (false === $this->handle) {
+            return false;
         }
 
-        if (null === $context) {
-            return fopen($filename, $mode, $use_include_path);
+        if ($use_include_path) {
+            $opened_path = stream_resolve_include_path($path);
         }
 
-        return fopen($filename, $mode, $use_include_path, $context);
+        return true;
     }
 
     /**
@@ -290,5 +240,35 @@ trait WrapsStream
     public function stream_truncate(int $new_size): bool
     {
         return ftruncate($this->handle, $new_size);
+    }
+
+    /**
+     * @param  string         $filename
+     * @param  string         $mode
+     * @param  bool           $use_include_path
+     * @param  bool           $report_errors
+     * @param  resource|null  $context
+     * @return false|resource
+     */
+    protected static function fopen(
+        string $filename,
+        string $mode,
+        bool $use_include_path,
+        bool $report_errors,
+        $context = null
+    ) {
+        if (! $report_errors) {
+            if (null === $context) {
+                return @fopen($filename, $mode, $use_include_path);
+            }
+
+            return @fopen($filename, $mode, $use_include_path, $context);
+        }
+
+        if (null === $context) {
+            return fopen($filename, $mode, $use_include_path);
+        }
+
+        return fopen($filename, $mode, $use_include_path, $context);
     }
 }

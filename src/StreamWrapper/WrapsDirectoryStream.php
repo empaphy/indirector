@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Empaphy\Indirector\StreamWrapper;
 
 /**
+ * @extends    \Empaphy\Indirector\StreamWrapper\WrapsStream
  * @implements \Empaphy\Indirector\StreamWrapper\DirectoryResourceWrapper
  */
 trait WrapsDirectoryStream
@@ -22,19 +23,13 @@ trait WrapsDirectoryStream
      */
     public function dir_opendir(string $path, int $options): bool
     {
-        self::unregister();
-
-        try {
-            if (null === $this->context) {
-                $this->handle = opendir($path);
-            } else {
-                $this->handle = opendir($path, $this->context);
-            }
-
-            return false !== $this->handle;
-        } finally {
-            self::register();
+        if (null === $this->context) {
+            $this->handle = opendir($path);
+        } else {
+            $this->handle = opendir($path, $this->context);
         }
+
+        return false !== $this->handle;
     }
 
     /**
@@ -49,6 +44,7 @@ trait WrapsDirectoryStream
     public function dir_closedir(): bool
     {
         closedir($this->handle);
+        $this->handle = false;
 
         return true;
     }
