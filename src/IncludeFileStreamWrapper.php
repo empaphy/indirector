@@ -18,6 +18,9 @@ use Throwable;
  */
 final class IncludeFileStreamWrapper extends FileStreamWrapperOverride implements StreamWrapperOverride
 {
+    /**
+     * Flag indicating that the stream was opened for inclusion.
+     */
     private const STREAM_OPEN_FOR_INCLUDE = 128;
 
     /**
