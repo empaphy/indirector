@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="laravel artisan (PHP 7.2)" type="PhpLocalRunConfigurationType" factoryName="PHP Console" path="$PROJECT_DIR$/tests/integration/laravel/artisan">
+    <CommandLine>
+      <PhpTestInterpreterSettings>
+        <option name="interpreterName" value="PHP 7.2" />
+      </PhpTestInterpreterSettings>
+    </CommandLine>
+    <method v="2" />
+  </configuration>
+</component>
