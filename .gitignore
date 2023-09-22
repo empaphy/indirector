@@ -1,5 +1,9 @@
+/tests/integration/laravel
 /vendor
 
 /composer.lock
 /composer.phar
 /composer_?.phar
+
+.DS_Store
+Thumb.db

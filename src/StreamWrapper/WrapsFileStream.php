@@ -14,6 +14,11 @@ trait WrapsFileStream
     use WrapsWriteableStream;
 
     /**
+     * @var resource|bool
+     */
+    protected $file = false;
+
+    /**
      * Renames a file or directory.
      *
      * This method is called in response to {@see rename()}.
@@ -40,6 +45,25 @@ trait WrapsFileStream
     }
 
     /**
+     * Close a resource.
+     *
+     * This method is called in response to {@see fclose()}.
+     *
+     * All resources that were locked, or allocated, by the wrapper should be released.
+     *
+     * @return void
+     */
+    public function stream_close(): void
+    {
+        parent::stream_close();
+
+        if (is_resource($this->file)) {
+            fclose($this->file);
+        }
+        $this->file = false;
+    }
+
+    /**
      * Advisory file locking.
      *
      * This method is called in response to {@see flock()}, when {@see file_put_contents()} (when flags contains
@@ -56,7 +80,29 @@ trait WrapsFileStream
      */
     public function stream_lock(int $operation): bool
     {
-        return flock($this->handle, $operation);
+        return flock($this->file, $operation);
+    }
+
+    /**
+     * Opens file.
+     *
+     * This method is called immediately after the wrapper is initialized (e.g. by {@see fopen()} and
+     * {@see file_get_contents()}).
+     *
+     * @param  string       $path         Specifies the path that was passed to the original function.
+     * @param  string       $mode         The mode used to open the file, as detailed for {@see fopen()}.
+     * @param  int          $options      Holds additional flags set by the streams API.
+     * @param  string|null  $opened_path  If the path is opened successfully, and {@see STREAM_USE_PATH} is set in
+     *                                    options, `opened_path` should be set to the full path of the file/resource
+     *                                    that was actually opened.
+     * @return bool `true` on success or `false` on failure.
+     */
+    public function stream_open(string $path, string $mode, int $options, ?string &$opened_path): bool
+    {
+        $this->path = $path;
+        $this->file = $this->handle = $this->open($path, $mode, $options, $opened_path);
+
+        return false !== $this->file;
     }
 
     /**
@@ -70,7 +116,7 @@ trait WrapsFileStream
      */
     public function stream_stat()
     {
-        return fstat($this->handle);
+        return fstat($this->file);
     }
 
     /**

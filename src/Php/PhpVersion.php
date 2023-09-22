@@ -12,8 +12,14 @@ namespace Empaphy\Indirector\Php;
 /**
  * Represents a PHP version.
  */
-class PhpVersion extends \PHPStan\Php\PhpVersion
+class PhpVersion
 {
+    /**
+     * @var int
+     * @readonly
+     */
+    public $versionId;
+
     /**
      * Major version.
      *
@@ -56,8 +62,7 @@ class PhpVersion extends \PHPStan\Php\PhpVersion
      */
     public function __construct(int $versionId)
     {
-        parent::__construct($versionId);
-
+        $this->versionId        = $versionId;
         $this->major            = self::getMajorFromVersionId($versionId);
         $this->minor            = self::getMinorFromVersionId($versionId);
         $this->patch            = self::getPatchFromVersionId($versionId);
@@ -115,62 +120,62 @@ class PhpVersion extends \PHPStan\Php\PhpVersion
      */
     public function __toString(): string
     {
-        return $this->getVersionString();
+        return "{$this->major}.{$this->minor}.{$this->patch}";
     }
 
     /**
      * Compare the major version component of this version with another.
      *
-     * @param  \PHPStan\Php\PhpVersion  $other  The other version to compare with.
+     * @param  self  $other  The other version to compare with.
      * @return int `-1` if this version is less than `$other`,
      *             `0` if they are equal,
      *             `1` if this version is greater than `$other`.
      */
-    public function compareMajorVersion(\PHPStan\Php\PhpVersion $other): int
+    public function compareMajorVersion(self $other): int
     {
-        return $this->major <=> self::getMajorFromVersionId($other->getVersionId());
+        return $this->major <=> self::getMajorFromVersionId($other->versionId);
     }
 
     /**
      * Compare the major and minor (`major.minor`) version component of this version with those of another.
      *
-     * @param  \PHPStan\Php\PhpVersion  $other  The other version to compare with.
+     * @param  self  $other  The other version to compare with.
      * @return int `-1` if this `major.minor` version is less than `$other`,
      *              `0` if `major.minor` is equal between both,
      *              `1` if this `major.minor` version is greater than `$other`.
      */
-    public function compareMinorVersion(\PHPStan\Php\PhpVersion $other): int
+    public function compareMinorVersion(self $other): int
     {
         $majorComparison = $this->compareMajorVersion($other);
         if ($majorComparison !== 0) {
             return $majorComparison;
         }
 
-        return $this->minor <=> self::getMinorFromVersionId($other->getVersionId());
+        return $this->minor <=> self::getMinorFromVersionId($other->versionId);
     }
 
     /**
      * Compare this version with another.
      *
-     * @param  \PHPStan\Php\PhpVersion  $other  The other version to compare with.
+     * @param  self  $other  The other version to compare with.
      * @return int `-1` if this version is less than `$other`,
      *             `0` if they are equal,
      *             `1` if this version is greater than `$other`.
      */
-    public function compare(\PHPStan\Php\PhpVersion $other): int
+    public function compare(self $other): int
     {
-       return $this->getVersionId() <=> $other->getVersionId();
+       return $this->versionId <=> $other->versionId;
     }
 
     /**
      * Check if this version is bidirectionally (both backward and forward) compatible with another.
      *
-     * @param  \PHPStan\Php\PhpVersion  $other  The other version to check against.
+     * @param  self  $other  The other version to check against.
      * @return bool `true` if this version is bidirectionally compatible with `$other`, `false` otherwise.
      */
-    public function isBidirectionallyCompatibleWith(\PHPStan\Php\PhpVersion $other): bool
+    public function isBidirectionallyCompatibleWith(self $other): bool
     {
-        return $this->featureVersionId === self::getFeatureVersionId($other->getVersionId());
+        return $this->featureVersionId === self::getFeatureVersionId($other->versionId);
     }
 
     /**
@@ -179,13 +184,13 @@ class PhpVersion extends \PHPStan\Php\PhpVersion
      * @todo This should probably be updated with special cases of incompatible changes, since PHP doesn't follow SemVer
      *       very strictly.
      *
-     * @param  \PHPStan\Php\PhpVersion  $other  The other version to check against.
+     * @param  self  $other  The other version to check against.
      * @return bool `true` if this version is backwards compatible with `$other`, `false` otherwise.
      */
-    public function isBackwardsCompatibleWith(\PHPStan\Php\PhpVersion $other): bool
+    public function isBackwardsCompatibleWith(self $other): bool
     {
         return 0 === $this->compareMajorVersion($other)
-            && $this->patch >= self::getPatchFromVersionId($other->getVersionId());
+            && $this->patch >= self::getPatchFromVersionId($other->versionId);
     }
 
     /**
@@ -194,13 +199,13 @@ class PhpVersion extends \PHPStan\Php\PhpVersion
      * @todo This should probably be updated with special cases of incompatible changes, since PHP doesn't follow SemVer
      *       very strictly.
      *
-     * @param  \PHPStan\Php\PhpVersion  $other  The other version to check against.
+     * @param  self  $other  The other version to check against.
      * @return bool `true` if this version is forward compatible with `$other`, `false` otherwise.
      */
-    public function isForwardCompatibleWith(\PHPStan\Php\PhpVersion $other): bool
+    public function isForwardCompatibleWith(self $other): bool
     {
         return 0 === $this->compareMajorVersion($other)
-            && $this->patch <= self::getPatchFromVersionId($other->getVersionId());
+            && $this->patch <= self::getPatchFromVersionId($other->versionId);
     }
 
     /**

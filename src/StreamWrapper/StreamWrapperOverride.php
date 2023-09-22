@@ -12,6 +12,8 @@ namespace Empaphy\Indirector\StreamWrapper;
  */
 interface StreamWrapperOverride
 {
+    public const INTERNAL_INCLUDE_FILE_NAME = '__empaphy_include_file_stream_wrapper.php';
+
     /**
      * Enables this stream wrapper by registering it.
      *

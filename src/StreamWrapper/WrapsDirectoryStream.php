@@ -11,6 +11,11 @@ namespace Empaphy\Indirector\StreamWrapper;
 trait WrapsDirectoryStream
 {
     /**
+     * @var resource|bool
+     */
+    protected $directory = false;
+
+    /**
      * Open directory handle.
      *
      * This method is called in response to {@see opendir()}.
@@ -24,12 +29,12 @@ trait WrapsDirectoryStream
     public function dir_opendir(string $path, int $options): bool
     {
         if (null === $this->context) {
-            $this->handle = opendir($path);
+            $this->directory = opendir($path);
         } else {
-            $this->handle = opendir($path, $this->context);
+            $this->directory = opendir($path, $this->context);
         }
 
-        return false !== $this->handle;
+        return false !== $this->directory;
     }
 
     /**
@@ -43,8 +48,8 @@ trait WrapsDirectoryStream
      */
     public function dir_closedir(): bool
     {
-        closedir($this->handle);
-        $this->handle = false;
+        closedir($this->directory);
+        $this->directory = false;
 
         return true;
     }
@@ -60,7 +65,7 @@ trait WrapsDirectoryStream
      */
     public function dir_readdir()
     {
-        return readdir($this->handle);
+        return readdir($this->directory);
     }
 
     /**
@@ -76,7 +81,7 @@ trait WrapsDirectoryStream
      */
     public function dir_rewinddir(): bool
     {
-        rewinddir($this->handle);
+        rewinddir($this->directory);
 
         return true;
     }

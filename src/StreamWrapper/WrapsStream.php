@@ -10,6 +10,22 @@ namespace Empaphy\Indirector\StreamWrapper;
 trait WrapsStream
 {
     /**
+     * The stream ID.
+     *
+     * @var int
+     *
+     * @readonly
+     */
+    public $id;
+
+    /**
+     * @var string
+     *
+     * @readonly
+     */
+    public $path = null;
+
+    /**
      * The current context, or null if no context was passed to the caller function.
      *
      * Use the stream_context_get_options() to parse the context.
@@ -27,6 +43,18 @@ trait WrapsStream
      * @var resource|false
      */
     protected $handle = false;
+
+    /**
+     * The counter for the stream IDs.
+     *
+     * @var int
+     */
+    private static $counter = 0;
+
+    public function __construct()
+    {
+        $this->id = ++self::$counter;
+    }
 
     /**
      * Retrieve the underlying resource.
@@ -50,14 +78,12 @@ trait WrapsStream
      *
      * All resources that were locked, or allocated, by the wrapper should be released.
      *
-     * @return bool `true` on success or `false` on failure
+     * @return void
      */
-    public function stream_close(): bool
+    public function stream_close(): void
     {
-        $result = fclose($this->handle);
+        fclose($this->handle);
         $this->handle = false;
-
-        return $result;
     }
 
     /**
@@ -107,6 +133,8 @@ trait WrapsStream
      */
     public function stream_metadata(string $path, int $option, $value): bool
     {
+        $this->path = $path;
+
         switch ($option) {
             case STREAM_META_TOUCH:
                 if ($value) {
@@ -131,35 +159,55 @@ trait WrapsStream
     }
 
     /**
-     * Opens file.
+     * Opens file or URL.
      *
      * This method is called immediately after the wrapper is initialized (e.g. by {@see fopen()} and
      * {@see file_get_contents()}).
      *
-     * @param  string       $path         Specifies the path that was passed to the original function.
+     * Emits {@see E_WARNING} if call to this method fails (i.e. not implemented).
+     *
+     * @param  string       $path         Specifies the URL that was passed to the original function.
      * @param  string       $mode         The mode used to open the file, as detailed for {@see fopen()}.
      * @param  int          $options      Holds additional flags set by the streams API.
-     * @param  string|null  $opened_path  If the path is opened successfully, and {@see STREAM_USE_PATH} is set in
+     * @param  null|string  $opened_path  If the path is opened successfully, and {@see STREAM_USE_PATH} is set in
      *                                    options, `opened_path` should be set to the full path of the file/resource
      *                                    that was actually opened.
      * @return bool `true` on success or `false` on failure.
      */
     public function stream_open(string $path, string $mode, int $options, ?string &$opened_path): bool
     {
+        $this->path   = $path;
+        $this->handle = $this->open($this->path, $mode, $options, $this->context);
+
+        return false !== $this->handle;
+    }
+
+    /**
+     * Opens file or URL and returns the handle.
+     *
+     * @param  string       $path         Path to open.
+     * @param  string       $mode         The mode used to open the file, as detailed for {@see fopen()}.
+     * @param  int          $options      Holds additional flags set by the streams API.
+     * @param  string|null  $opened_path  If the path is opened successfully, and {@see STREAM_USE_PATH} is set in
+     *                                    options, `opened_path` is set to the full path of the opened file/resource.
+     * @return resource|false The stream resource, or `false` on failure.
+     */
+    protected function open(string $path, string $mode, int $options, ?string &$opened_path)
+    {
         $use_include_path = (bool) ($options & STREAM_USE_PATH);
         $report_errors    = (bool) ($options & STREAM_REPORT_ERRORS);
 
-        $this->handle = static::fopen($path, $mode, $use_include_path, $report_errors, $this->context);
+        $handle = static::fopen($path, $mode, $use_include_path, $report_errors, $this->context);
 
-        if (false === $this->handle) {
-            return false;
-        }
-
-        if ($use_include_path) {
+        if (false === $handle) {
+            if ($report_errors) {
+                trigger_error("Couldn't find '{$path}' for inclusion", E_USER_WARNING);
+            }
+        } elseif ($use_include_path) {
             $opened_path = stream_resolve_include_path($path);
         }
 
-        return true;
+        return $handle;
     }
 
     /**
@@ -248,7 +296,7 @@ trait WrapsStream
      * @param  bool           $use_include_path
      * @param  bool           $report_errors
      * @param  resource|null  $context
-     * @return false|resource
+     * @return resource|false
      */
     protected static function fopen(
         string $filename,

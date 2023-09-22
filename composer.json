@@ -1,23 +1,55 @@
 {
-    "name": "empaphy/stream-wrapper",
+    "name":        "empaphy/indirector",
+    "description": "JIT code refactoring for PHP",
+    "type":        "composer-plugin",
+    "license":     "MIT",
+    "keywords":    ["rector", "refactoring", "compatability"],
+
+    "authors": [
+        {
+            "name":     "Alwin Garside",
+            "email":    "alwin@garsi.de",
+            "homepage": "https://www.yogarine.com"
+        },
+        {
+            "name": "Edie Lemoine"
+        }
+    ],
+
+    "support": {
+        "issues": "https://github.com/empaphy/indirector/issues",
+        "wiki":   "https://github.com/empaphy/indirector/wiki",
+        "source": "https://github.com/empaphy/indirector/tree/main"
+    },
 
     "require": {
-        "php":           ">=7.2",
-        "rector/rector": "^0.18"
+        "php":                 ">=7.2",
+        "composer-plugin-api": ">=1",
+        "rector/rector":       "0.* || ^1"
+    },
+
+    "require-dev": {
+        "composer/composer": ">=2.3",
+        "phpunit/phpunit":   "^8.0"
     },
 
     "autoload": {
+        "files": [ "bootstrap.php" ],
         "psr-4": {
             "Empaphy\\Indirector\\": "src/"
+        }
+    },
+
+    "autoload-dev": {
+        "psr-4": {
+            "Empaphy\\Indirector\\Test\\": "tests/unit"
         }
     },
 
     "minimum-stability": "dev",
     "prefer-stable":     true,
 
-    "config": {
-        "platform": {
-            "php": "7.2.0"
-        }
+    "extra": {
+        "class": "Empaphy\\Indirector\\Composer\\Plugin"
     }
 }
